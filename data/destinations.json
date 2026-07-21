@@ -1,0 +1,98 @@
+[
+  {
+    "name": "Bali",
+    "country": "Indonesia",
+    "continent": "Asia",
+    "description": "Tropical island known for beaches, temples, and rice terraces.",
+    "tags": ["beach", "nature", "culture"],
+    "avg_cost_per_day": 45
+  },
+  {
+    "name": "Cancun",
+    "country": "Mexico",
+    "continent": "North America",
+    "description": "Popular beach destination with resorts and nightlife.",
+    "tags": ["beach", "nightlife", "food"],
+    "avg_cost_per_day": 90
+  },
+  {
+    "name": "Paris",
+    "country": "France",
+    "continent": "Europe",
+    "description": "City of lights known for art, food, and architecture.",
+    "tags": ["culture", "food", "romance"],
+    "avg_cost_per_day": 150
+  },
+  {
+    "name": "Tokyo",
+    "country": "Japan",
+    "continent": "Asia",
+    "description": "Vibrant metropolis blending tradition and technology.",
+    "tags": ["city", "food", "culture"],
+    "avg_cost_per_day": 130
+  },
+  {
+    "name": "Cape Town",
+    "country": "South Africa",
+    "continent": "Africa",
+    "description": "Coastal city with mountains, beaches, and wildlife nearby.",
+    "tags": ["beach", "adventure", "nature"],
+    "avg_cost_per_day": 60
+  },
+  {
+    "name": "Zanzibar",
+    "country": "Tanzania",
+    "continent": "Africa",
+    "description": "Idyllic island with white sand beaches and spice tours.",
+    "tags": ["beach", "relaxation"],
+    "avg_cost_per_day": 55
+  },
+  {
+    "name": "New York City",
+    "country": "USA",
+    "continent": "North America",
+    "description": "Iconic city known for skyscrapers, culture, and food.",
+    "tags": ["city", "food", "nightlife"],
+    "avg_cost_per_day": 200
+  },
+  {
+    "name": "Marrakech",
+    "country": "Morocco",
+    "continent": "Africa",
+    "description": "Historic city with vibrant markets and desert access.",
+    "tags": ["culture", "adventure", "food"],
+    "avg_cost_per_day": 40
+  },
+  {
+    "name": "Bangkok",
+    "country": "Thailand",
+    "continent": "Asia",
+    "description": "Bustling capital famous for street food and temples.",
+    "tags": ["food", "culture", "budget"],
+    "avg_cost_per_day": 35
+  },
+  {
+    "name": "Rio de Janeiro",
+    "country": "Brazil",
+    "continent": "South America",
+    "description": "Beach city famous for Carnival and mountain views.",
+    "tags": ["beach", "nightlife", "adventure"],
+    "avg_cost_per_day": 70
+  },
+  {
+    "name": "Reykjavik",
+    "country": "Iceland",
+    "continent": "Europe",
+    "description": "Gateway to glaciers, hot springs, and northern lights.",
+    "tags": ["nature", "adventure"],
+    "avg_cost_per_day": 180
+  },
+  {
+    "name": "Yaounde",
+    "country": "Cameroon",
+    "continent": "Africa",
+    "description": "Hilly capital city rich in culture and local cuisine.",
+    "tags": ["city", "food", "culture"],
+    "avg_cost_per_day": 30
+  }
+]

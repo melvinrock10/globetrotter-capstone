@@ -26,6 +26,7 @@ build/
 
 # Data files (populated at runtime; keep only .gitkeep)
 data/*.json
+!data/destinations.json
 
 # IDE / editor
 .vscode/
