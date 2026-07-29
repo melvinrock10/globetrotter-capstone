@@ -7,7 +7,7 @@ import json
 import os
 
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DATA_DIR = os.path.join(_BASE_DIR, "data")
+DATA_DIR = os.environ.get("DATA_DIR", os.path.join(_BASE_DIR, "data"))
 USERS_FILE = os.path.join(DATA_DIR, "users.json")
 
 

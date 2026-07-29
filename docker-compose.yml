@@ -1,13 +1,64 @@
 version: "3.9"
 
 services:
-  globetrotter:
-    build: .
-    container_name: globetrotter_app
+  auth-service:
+    build: ./services/auth-service
+    container_name: globetrotter_auth
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./data:/data
+    environment:
+      - DATA_DIR=/data
+      - SECRET_KEY=globetrotter-secret-change-in-prod
+
+  destinations-service:
+    build: ./services/destinations-service
+    container_name: globetrotter_destinations
+    ports:
+      - "5002:5002"
+    volumes:
+      - ./data:/data
+    environment:
+      - DATA_DIR=/data
+
+  recommendations-service:
+    build: ./services/recommendations-service
+    container_name: globetrotter_recommendations
+    ports:
+      - "5003:5003"
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:5001
+      - DESTINATIONS_SERVICE_URL=http://destinations-service:5002
+    depends_on:
+      - auth-service
+      - destinations-service
+
+  itineraries-service:
+    build: ./services/itineraries-service
+    container_name: globetrotter_itineraries
+    ports:
+      - "5004:5004"
+    volumes:
+      - ./data:/data
+    environment:
+      - DATA_DIR=/data
+      - AUTH_SERVICE_URL=http://auth-service:5001
+    depends_on:
+      - auth-service
+
+  api-gateway:
+    build: ./services/api-gateway
+    container_name: globetrotter_gateway
     ports:
       - "5000:5000"
-    # Mount local code so changes are reflected without rebuilding the image
-    volumes:
-      - .:/globetrotter
     environment:
-      - PORT=5000
+      - AUTH_SERVICE_URL=http://auth-service:5001
+      - DESTINATIONS_SERVICE_URL=http://destinations-service:5002
+      - RECOMMENDATIONS_SERVICE_URL=http://recommendations-service:5003
+      - ITINERARIES_SERVICE_URL=http://itineraries-service:5004
+    depends_on:
+      - auth-service
+      - destinations-service
+      - recommendations-service
+      - itineraries-service
