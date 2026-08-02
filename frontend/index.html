@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GlobeTrotter — Buea &amp; Limbe</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="logo">Explore<span>Fako</span></div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="browse.html">Browse</a>
+    <a href="itinerary.html">My Itineraries</a>
+    <a href="login.html" id="nav-login">Log in</a>
+    <a href="admin.html" id="nav-admin" style="display:none;">Admin</a>
+    <a href="#" id="nav-logout" class="btn-primary" style="display:none;">Log out</a>
+  </nav>
+</div>
+
+<div class="hero">
+  <div class="hero-content">
+    <div class="hero-eyebrow">Fako Division, Cameroon</div>
+<h1>Every trusted place in Buea &amp; Limbe.</h1>
+<p>Explore Fako is your local guide to Buea and Limbe only — hospitals, hotels, restaurants, and more, rated and reviewed by the people who use them.</p>
+  </div>
+</div>
+
+<form class="search-bar" id="search-form">
+  <input type="text" id="search-q" placeholder="Search by name or area…">
+  <select id="search-town">
+    <option value="">All towns</option>
+    <option value="Buea">Buea</option>
+    <option value="Limbe">Limbe</option>
+  </select>
+  <select id="search-category">
+    <option value="">All categories</option>
+    <option value="hospital">Hospitals</option>
+    <option value="hotel">Hotels</option>
+    <option value="restaurant">Restaurants</option>
+    <option value="pharmacy">Pharmacies</option>
+    <option value="school">Schools</option>
+  </select>
+  <button type="submit">Search</button>
+</form>
+
+<div class="signpost-row">
+  <div class="signpost" data-category="hospital"><span class="arrow">➔</span> Hospitals</div>
+  <div class="signpost" data-category="hotel"><span class="arrow">➔</span> Hotels</div>
+  <div class="signpost" data-category="restaurant"><span class="arrow">➔</span> Restaurants</div>
+  <div class="signpost" data-category="pharmacy"><span class="arrow">➔</span> Pharmacies</div>
+  <div class="signpost" data-category="school"><span class="arrow">➔</span> Schools</div>
+</div>
+
+<div class="section">
+  <div class="section-heading">Featured places</div>
+  <div class="place-grid" id="place-grid">
+    <p style="font-family: var(--font-mono); color: #6B756E;">Loading places…</p>
+  </div>
+</div>
+
+<div class="footer">
+  Explore Fako — a distributed systems capstone project by Melvin, The ICT University.<br>
+  Mountain photo: <a href="https://commons.wikimedia.org/wiki/File:Mont-Cameroun.jpg" target="_blank">Wikimedia Commons</a>, CC BY 2.5.
+</div>
+
+<script src="api.js"></script>
+<script>
+  function updateNav() {
+    document.getElementById("nav-login").style.display = isLoggedIn() ? "none" : "inline";
+    document.getElementById("nav-logout").style.display = isLoggedIn() ? "inline" : "none";
+    document.getElementById("nav-admin").style.display = isAdmin() ? "inline" : "none";
+  }
+  document.getElementById("nav-logout").addEventListener("click", (e) => {
+    e.preventDefault();
+    apiLogout();
+    updateNav();
+    window.location.href = "index.html";
+  });
+  updateNav();
+
+  function renderPlaces(places) {
+    const grid = document.getElementById("place-grid");
+    if (places.length === 0) {
+      grid.innerHTML = `<p style="font-family: var(--font-mono); color:#6B756E;">No places found. Try a different search.</p>`;
+      return;
+    }
+    grid.innerHTML = places.map(p => `
+      <a class="place-card" href="place.html?id=${p.id}">
+        <div class="thumb" style="${p.image_url ? `background-image:url('${p.image_url}')` : ""}">
+          ${p.image_url ? "" : "No image yet"}
+        </div>
+        <div class="body">
+          <div class="category-tag">${p.category || ""}</div>
+          <h3>${p.name}</h3>
+          <div class="town">${p.town || ""}</div>
+          <div class="rating">★ ${p.average_rating ?? "—"} (${p.review_count ?? 0} reviews)</div>
+        </div>
+      </a>
+    `).join("");
+  }
+
+  async function loadPlaces(filters = {}) {
+    const grid = document.getElementById("place-grid");
+    grid.innerHTML = `<p style="font-family: var(--font-mono); color:#6B756E;">Loading places…</p>`;
+    try {
+      const places = await apiGetPlaces(filters);
+      renderPlaces(places);
+    } catch (err) {
+      grid.innerHTML = `<p style="font-family: var(--font-mono); color:#B3261E;">Could not load places. Is the API Gateway running?</p>`;
+    }
+  }
+
+  document.getElementById("search-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    loadPlaces({
+      q: document.getElementById("search-q").value,
+      town: document.getElementById("search-town").value,
+      category: document.getElementById("search-category").value,
+    });
+  });
+
+  document.querySelectorAll(".signpost").forEach(el => {
+    el.addEventListener("click", () => {
+      window.location.href = `browse.html?category=${el.dataset.category}`;
+    });
+  });
+
+  loadPlaces();
+</script>
+</body>
+</html>

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin — Explore Fako</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .admin-wrap { max-width: 1000px; margin: 2rem auto; padding: 0 2rem; }
+  .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+  .admin-header h1 { font-family: var(--font-display); font-size: 1.8rem; margin: 0; }
+  .add-form { background: var(--white); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 4px 14px rgba(20,35,28,0.08); }
+  .add-form h2 { font-family: var(--font-display); font-size: 1.2rem; margin-top: 0; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+  .form-grid .full { grid-column: 1 / -1; }
+  .form-grid label { font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 0.3rem; }
+  .form-grid input, .form-grid textarea, .form-grid select {
+    width: 100%; padding: 0.6rem 0.8rem; border: 1px solid #DDE0D8; border-radius: 8px; font-family: var(--font-body); font-size: 0.9rem;
+  }
+  .form-grid textarea { resize: vertical; min-height: 60px; }
+  .admin-table { width: 100%; border-collapse: collapse; background: var(--white); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 14px rgba(20,35,28,0.08); }
+  .admin-table th, .admin-table td { text-align: left; padding: 0.7rem 0.9rem; border-bottom: 1px solid #EDEFEA; font-size: 0.88rem; }
+  .admin-table th { background: var(--green-deep); color: white; font-family: var(--font-mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .admin-table .cat-pill { background: var(--mist); color: var(--green-deep); padding: 0.2rem 0.6rem; border-radius: 20px; font-family: var(--font-mono); font-size: 0.72rem; }
+  .row-actions button { border: none; background: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; margin-right: 0.6rem; }
+  .row-actions .edit-btn { color: var(--green-deep); }
+  .row-actions .delete-btn { color: #B3261E; }
+  .msg { padding: 0.7rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.88rem; }
+  .msg-success { background: #E5F3EA; color: #1F4D3E; }
+  .msg-error { background: #FBE9E7; color: #B3261E; }
+  .not-admin { text-align: center; padding: 4rem 2rem; font-family: var(--font-display); font-size: 1.3rem; }
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="logo">Globe<span>Trotter</span></div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="browse.html">Browse</a>
+    <a href="#" id="nav-logout">Log out</a>
+  </nav>
+</div>
+
+<div id="admin-content" style="display:none;">
+  <div class="admin-wrap">
+    <div class="admin-header">
+      <h1>Admin dashboard</h1>
+      <span style="font-family: var(--font-mono); font-size: 0.85rem; color:#6B756E;" id="place-count"></span>
+    </div>
+
+    <div id="msg-area"></div>
+
+    <div class="add-form">
+      <h2 id="form-title">Add a new place</h2>
+      <form id="place-form">
+        <input type="hidden" id="edit-id">
+        <div class="form-grid">
+          <div>
+            <label>Name</label>
+            <input type="text" id="f-name" required>
+          </div>
+          <div>
+            <label>Category (any — e.g. hospital, beach, zoo, stadium, monument)</label>
+            <input type="text" id="f-category" list="category-suggestions" required>
+            <datalist id="category-suggestions">
+              <option value="hospital"><option value="hotel"><option value="restaurant">
+              <option value="pharmacy"><option value="school"><option value="park">
+              <option value="zoo"><option value="beach"><option value="government office">
+              <option value="monument"><option value="stadium"><option value="market">
+              <option value="supermarket"><option value="shop"><option value="bakery">
+            </datalist>
+          </div>
+          <div>
+            <label>Town / area</label>
+            <input type="text" id="f-town" placeholder="Buea, Limbe, etc." required>
+          </div>
+          <div>
+            <label>Phone (optional)</label>
+            <input type="text" id="f-phone">
+          </div>
+          <div class="full">
+            <label>Address</label>
+            <input type="text" id="f-address">
+          </div>
+          <div class="full">
+            <label>Description</label>
+            <textarea id="f-description"></textarea>
+          </div>
+          <div>
+            <label>Tags (comma separated)</label>
+            <input type="text" id="f-tags" placeholder="emergency, 24-hour, family friendly">
+          </div>
+          <div>
+            <label>Image link (paste a real URL)</label>
+            <input type="text" id="f-image" placeholder="https://...">
+          </div>
+          <div>
+            <label>Latitude</label>
+            <input type="text" id="f-lat" placeholder="4.1560">
+          </div>
+          <div>
+            <label>Longitude</label>
+            <input type="text" id="f-lng" placeholder="9.2830">
+          </div>
+        </div>
+        <button type="submit" class="btn" style="margin-top:1rem;" id="submit-btn">Add place</button>
+        <button type="button" class="btn" style="margin-top:1rem; margin-left:0.6rem; background:#6B756E; display:none;" id="cancel-edit-btn">Cancel edit</button>
+      </form>
+    </div>
+
+    <table class="admin-table">
+      <thead>
+        <tr><th>Name</th><th>Category</th><th>Town</th><th>Rating</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="places-tbody"></tbody>
+    </table>
+
+    <div class="section-heading" style="margin-top:3rem;">Analytics</div>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap:1rem; margin-bottom:1.5rem;">
+      <div class="add-form" style="text-align:center; padding:1rem;"><div style="font-family:var(--font-mono);font-size:0.75rem;color:#6B756E;">TOTAL PLACES</div><div style="font-family:var(--font-display);font-size:1.8rem;" id="stat-places">—</div></div>
+      <div class="add-form" style="text-align:center; padding:1rem;"><div style="font-family:var(--font-mono);font-size:0.75rem;color:#6B756E;">TOTAL USERS</div><div style="font-family:var(--font-display);font-size:1.8rem;" id="stat-users">—</div></div>
+      <div class="add-form" style="text-align:center; padding:1rem;"><div style="font-family:var(--font-mono);font-size:0.75rem;color:#6B756E;">TOTAL REVIEWS</div><div style="font-family:var(--font-display);font-size:1.8rem;" id="stat-reviews">—</div></div>
+      <div class="add-form" style="text-align:center; padding:1rem;"><div style="font-family:var(--font-mono);font-size:0.75rem;color:#6B756E;">TOTAL ITINERARIES</div><div style="font-family:var(--font-display);font-size:1.8rem;" id="stat-itineraries">—</div></div>
+    </div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem; margin-bottom:2.5rem;">
+      <div class="add-form"><canvas id="chart-category"></canvas></div>
+      <div class="add-form"><canvas id="chart-town"></canvas></div>
+    </div>
+
+    <div class="admin-header" style="margin-top:2rem;">
+      <h1>Registered users</h1>
+    </div>
+    <table class="admin-table">
+      <thead>
+        <tr><th>Username</th><th>Admin?</th><th>Preferences</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="users-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="not-admin-content" class="not-admin" style="display:none;">
+  You need an admin account to view this page. <br><a href="login.html" style="color:var(--green-deep); font-weight:600;">Log in</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="api.js"></script>
+<script>
+  document.getElementById("nav-logout").addEventListener("click", (e) => {
+    e.preventDefault();
+    apiLogout();
+    window.location.href = "index.html";
+  });
+
+  if (!isLoggedIn() || !isAdmin()) {
+    document.getElementById("not-admin-content").style.display = "block";
+  } else {
+    document.getElementById("admin-content").style.display = "block";
+    loadPlacesTable();
+    loadUsersTable();
+    loadAnalytics();
+  }
+
+  async function loadUsersTable() {
+    const tbody = document.getElementById("users-tbody");
+    try {
+      const users = await apiGetAllUsers();
+      tbody.innerHTML = users.map(u => `
+        <tr>
+          <td><strong>${u.username}</strong></td>
+          <td>${u.is_admin ? "Yes" : "No"}</td>
+          <td>${(u.preferences || []).join(", ") || "—"}</td>
+          <td class="row-actions">
+            <button class="delete-btn" onclick="doDeleteUser('${u.username}')">Delete</button>
+          </td>
+        </tr>
+      `).join("");
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="4">Could not load users: ${err.message}</td></tr>`;
+    }
+  }
+
+  async function doDeleteUser(username) {
+    if (!confirm(`Delete user "${username}"? This can't be undone.`)) return;
+    try {
+      await apiDeleteUser(username);
+      showMsg("User deleted.", "success");
+      loadUsersTable();
+      loadAnalytics();
+    } catch (err) {
+      showMsg(err.message, "error");
+    }
+  }
+
+  async function loadAnalytics() {
+    try {
+      const places = await apiGetPlaces();
+      const users = await apiGetAllUsers();
+
+      document.getElementById("stat-places").textContent = places.length;
+      document.getElementById("stat-users").textContent = users.length;
+
+      const totalReviews = places.reduce((sum, p) => sum + (p.review_count || 0), 0);
+      document.getElementById("stat-reviews").textContent = totalReviews;
+
+      try {
+        const allItins = await apiGetAllItineraries();
+        document.getElementById("stat-itineraries").textContent = allItins.length;
+      } catch (err) {
+        document.getElementById("stat-itineraries").textContent = "—";
+      }
+
+      const byCategory = {};
+      places.forEach(p => { const c = p.category || "uncategorized"; byCategory[c] = (byCategory[c] || 0) + 1; });
+      new Chart(document.getElementById("chart-category"), {
+        type: "bar",
+        data: {
+          labels: Object.keys(byCategory),
+          datasets: [{ label: "Places by category", data: Object.values(byCategory), backgroundColor: "#1F4D3E" }],
+        },
+        options: { plugins: { legend: { display: false } }, responsive: true },
+      });
+
+      const byTown = {};
+      places.forEach(p => { const t = p.town || "unspecified"; byTown[t] = (byTown[t] || 0) + 1; });
+      new Chart(document.getElementById("chart-town"), {
+        type: "doughnut",
+        data: {
+          labels: Object.keys(byTown),
+          datasets: [{ data: Object.values(byTown), backgroundColor: ["#1F4D3E", "#C98A2C", "#6B756E", "#8FA396"] }],
+        },
+        options: { responsive: true },
+      });
+    } catch (err) {
+      console.error("Analytics failed to load:", err);
+    }
+  }
+
+  function showMsg(text, type) {
+    document.getElementById("msg-area").innerHTML = `<div class="msg msg-${type}">${text}</div>`;
+    setTimeout(() => { document.getElementById("msg-area").innerHTML = ""; }, 4000);
+  }
+
+  async function loadPlacesTable() {
+    try {
+      const places = await apiGetPlaces();
+      document.getElementById("place-count").textContent = `${places.length} places`;
+      const tbody = document.getElementById("places-tbody");
+      tbody.innerHTML = places.map(p => `
+        <tr>
+          <td><strong>${p.name}</strong></td>
+          <td><span class="cat-pill">${p.category || "—"}</span></td>
+          <td>${p.town || "—"}</td>
+          <td>★ ${p.average_rating ?? "—"}</td>
+          <td class="row-actions">
+            <button class="edit-btn" onclick="startEdit('${p.id}')">Edit</button>
+            <button class="delete-btn" onclick="doDelete('${p.id}', '${p.name.replace(/'/g, "\\'")}')">Delete</button>
+          </td>
+        </tr>
+      `).join("");
+      window._placesCache = places;
+    } catch (err) {
+      showMsg("Could not load places: " + err.message, "error");
+    }
+  }
+
+  function startEdit(id) {
+    const place = window._placesCache.find(p => p.id === id);
+    if (!place) return;
+    document.getElementById("edit-id").value = id;
+    document.getElementById("f-name").value = place.name || "";
+    document.getElementById("f-category").value = place.category || "";
+    document.getElementById("f-town").value = place.town || "";
+    document.getElementById("f-phone").value = place.phone || "";
+    document.getElementById("f-address").value = place.address || "";
+    document.getElementById("f-description").value = place.description || "";
+    document.getElementById("f-tags").value = (place.tags || []).join(", ");
+    document.getElementById("f-image").value = place.image_url || "";
+    document.getElementById("f-lat").value = place.latitude ?? "";
+    document.getElementById("f-lng").value = place.longitude ?? "";
+    document.getElementById("form-title").textContent = "Edit place: " + place.name;
+    document.getElementById("submit-btn").textContent = "Save changes";
+    document.getElementById("cancel-edit-btn").style.display = "inline-block";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function resetForm() {
+    document.getElementById("place-form").reset();
+    document.getElementById("edit-id").value = "";
+    document.getElementById("form-title").textContent = "Add a new place";
+    document.getElementById("submit-btn").textContent = "Add place";
+    document.getElementById("cancel-edit-btn").style.display = "none";
+  }
+
+  document.getElementById("cancel-edit-btn").addEventListener("click", resetForm);
+
+  document.getElementById("place-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const id = document.getElementById("edit-id").value;
+    const payload = {
+      name: document.getElementById("f-name").value,
+      category: document.getElementById("f-category").value,
+      town: document.getElementById("f-town").value,
+      phone: document.getElementById("f-phone").value,
+      address: document.getElementById("f-address").value,
+      description: document.getElementById("f-description").value,
+      tags: document.getElementById("f-tags").value.split(",").map(t => t.trim()).filter(Boolean),
+      image_url: document.getElementById("f-image").value,
+      latitude: parseFloat(document.getElementById("f-lat").value) || null,
+      longitude: parseFloat(document.getElementById("f-lng").value) || null,
+    };
+    try {
+      if (id) {
+        await apiUpdatePlace(id, payload);
+        showMsg("Place updated.", "success");
+      } else {
+        await apiCreatePlace(payload);
+        showMsg("Place added.", "success");
+      }
+      resetForm();
+      loadPlacesTable();
+    } catch (err) {
+      showMsg(err.message, "error");
+    }
+  });
+
+  async function doDelete(id, name) {
+    if (!confirm(`Delete "${name}"? This can't be undone.`)) return;
+    try {
+      await apiDeletePlace(id);
+      showMsg("Place deleted.", "success");
+      loadPlacesTable();
+    } catch (err) {
+      showMsg(err.message, "error");
+    }
+  }
+</script>
+</body>
+</html>

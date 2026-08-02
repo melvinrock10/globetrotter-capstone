@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>My Itineraries — Explore Fako</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .itin-wrap { max-width: 800px; margin: 2rem auto; padding: 0 2rem; }
+  .itin-form { background: var(--white); border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 14px rgba(20,35,28,0.08); margin-bottom: 2rem; }
+  .itin-form input { width: 100%; padding: 0.6rem 0.8rem; border: 1px solid #DDE0D8; border-radius: 8px; margin-bottom: 0.7rem; font-family: var(--font-body); }
+  .itin-card { background: var(--white); border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(20,35,28,0.07); }
+  .itin-card h3 { font-family: var(--font-display); margin: 0 0 0.4rem; }
+  .itin-card .dates { font-family: var(--font-mono); font-size: 0.82rem; color: var(--green-deep); }
+  .itin-card .places { font-size: 0.9rem; color: #6B756E; margin-top: 0.4rem; }
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="logo">Explore<span>Fako</span></div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="browse.html">Browse</a>
+    <a href="itinerary.html">My Itineraries</a>
+    <a href="admin.html" id="nav-admin" style="display:none;">Admin</a>
+    <a href="#" id="nav-logout">Log out</a>
+  </nav>
+</div>
+
+<div class="itin-wrap" id="itin-wrap">
+  <div class="section-heading" style="margin-top:1rem;">My Itineraries</div>
+  <div id="login-prompt" style="display:none;">
+    <p>Please <a href="login.html" style="color:var(--green-deep); font-weight:600;">log in</a> to view and create itineraries.</p>
+  </div>
+  <div id="itin-content" style="display:none;">
+    <div class="itin-form">
+      <h3 style="font-family: var(--font-display); margin-top:0;">Plan a new trip</h3>
+      <input type="text" id="i-title" placeholder="Trip title (e.g. Weekend in Limbe)">
+      <input type="text" id="i-places" placeholder="Places (comma separated place names)">
+      <input type="date" id="i-start">
+      <input type="date" id="i-end">
+      <input type="text" id="i-notes" placeholder="Notes (optional)">
+      <button class="btn" id="add-itin-btn">Add itinerary</button>
+    </div>
+    <div id="itin-list"></div>
+  </div>
+</div>
+
+<script src="api.js"></script>
+<script>
+  document.getElementById("nav-logout").addEventListener("click", (e) => {
+    e.preventDefault();
+    apiLogout();
+    window.location.href = "index.html";
+  });
+  document.getElementById("nav-admin").style.display = isAdmin() ? "inline" : "none";
+
+  if (!isLoggedIn()) {
+    document.getElementById("login-prompt").style.display = "block";
+  } else {
+    document.getElementById("itin-content").style.display = "block";
+    loadItineraries();
+  }
+
+  async function loadItineraries() {
+    const listEl = document.getElementById("itin-list");
+    try {
+      const items = await apiGetItineraries();
+      if (items.length === 0) {
+        listEl.innerHTML = `<p style="color:#6B756E;">No itineraries yet — plan your first trip above.</p>`;
+        return;
+      }
+      listEl.innerHTML = items.slice().reverse().map(it => `
+        <div class="itin-card">
+          <h3>${it.title}</h3>
+          <div class="dates">${it.start_date || "?"} → ${it.end_date || "?"}</div>
+          <div class="places">Places: ${(it.destinations || []).join(", ") || "—"}</div>
+          ${it.notes ? `<p style="margin-top:0.5rem;">${it.notes}</p>` : ""}
+        </div>
+      `).join("");
+    } catch (err) {
+      listEl.innerHTML = `<p style="color:#B3261E;">Could not load itineraries.</p>`;
+    }
+  }
+
+  document.getElementById("add-itin-btn").addEventListener("click", async () => {
+    const title = document.getElementById("i-title").value.trim();
+    if (!title) { alert("Please enter a trip title."); return; }
+    const places = document.getElementById("i-places").value.split(",").map(p => p.trim()).filter(Boolean);
+    try {
+      await apiCreateItinerary({
+        title,
+        destinations: places,
+        start_date: document.getElementById("i-start").value,
+        end_date: document.getElementById("i-end").value,
+        notes: document.getElementById("i-notes").value,
+      });
+      document.getElementById("i-title").value = "";
+      document.getElementById("i-places").value = "";
+      document.getElementById("i-start").value = "";
+      document.getElementById("i-end").value = "";
+      document.getElementById("i-notes").value = "";
+      loadItineraries();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+</script>
+</body>
+</html>

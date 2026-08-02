@@ -1,0 +1,165 @@
+-<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Place details — Explore Fako</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="styles.css">
+<style>
+  .place-detail { max-width: 800px; margin: 2rem auto; padding: 0 2rem; }
+  .place-hero { height: 280px; border-radius: 14px; background: linear-gradient(135deg, var(--green-deep), var(--green-dark)); background-size: cover; background-position: center; margin-bottom: 1.5rem; display:flex; align-items:center; justify-content:center; color: rgba(255,255,255,0.5); font-family: var(--font-mono); }
+  .place-title-row { display: flex; justify-content: space-between; align-items: flex-start; }
+  .place-detail h1 { font-family: var(--font-display); font-size: 2rem; margin: 0 0 0.3rem; }
+  .place-detail .category-tag { font-family: var(--font-mono); font-size: 0.75rem; text-transform: uppercase; color: var(--gold); }
+  .place-detail .meta-row { color: #6B756E; margin: 0.6rem 0 1.2rem; font-size: 0.95rem; }
+  .place-detail .rating-big { font-family: var(--font-mono); font-size: 1.1rem; color: var(--green-deep); font-weight: 600; }
+  #detail-map { height: 240px; border-radius: 12px; margin: 1.2rem 0; }
+  .reviews-section { margin-top: 2.5rem; }
+  .review-form { background: var(--white); border-radius: 12px; padding: 1.2rem; box-shadow: 0 4px 14px rgba(20,35,28,0.08); margin-bottom: 1.5rem; }
+  .review-form select, .review-form textarea { width: 100%; padding: 0.6rem 0.8rem; border: 1px solid #DDE0D8; border-radius: 8px; font-family: var(--font-body); margin-bottom: 0.7rem; }
+  .review-card { background: var(--white); border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 0.8rem; box-shadow: 0 2px 8px rgba(20,35,28,0.06); }
+  .review-card .review-head { display: flex; justify-content: space-between; font-size: 0.85rem; color: #6B756E; margin-bottom: 0.4rem; }
+  .review-card .stars { color: var(--gold); font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="logo">Explore<span>Fako</span></div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="browse.html">Browse</a>
+    <a href="login.html" id="nav-login">Log in</a>
+    <a href="admin.html" id="nav-admin" style="display:none;">Admin</a>
+    <a href="#" id="nav-logout" class="btn-primary" style="display:none;">Log out</a>
+  </nav>
+</div>
+
+<div class="place-detail" id="place-detail">
+  <p style="font-family: var(--font-mono); color:#6B756E;">Loading…</p>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="api.js"></script>
+<script>
+  function updateNav() {
+    document.getElementById("nav-login").style.display = isLoggedIn() ? "none" : "inline";
+    document.getElementById("nav-logout").style.display = isLoggedIn() ? "inline" : "none";
+    document.getElementById("nav-admin").style.display = isAdmin() ? "inline" : "none";
+  }
+  document.getElementById("nav-logout").addEventListener("click", (e) => {
+    e.preventDefault();
+    apiLogout();
+    updateNav();
+    window.location.href = "index.html";
+  });
+  updateNav();
+
+  const params = new URLSearchParams(window.location.search);
+  const placeId = params.get("id");
+
+  async function loadPlace() {
+    const container = document.getElementById("place-detail");
+    if (!placeId) {
+      container.innerHTML = `<p>No place specified.</p>`;
+      return;
+    }
+    try {
+      const place = await apiGetPlace(placeId);
+      const reviews = await apiGetReviews(placeId);
+
+      container.innerHTML = `
+        <div class="place-hero" style="${place.image_url ? `background-image:url('${place.image_url}')` : ""}">
+          ${place.image_url ? "" : "No image yet"}
+        </div>
+        <div class="place-title-row">
+          <div>
+            <div class="category-tag">${place.category || ""}</div>
+            <h1>${place.name}</h1>
+          </div>
+          <div class="rating-big">★ ${place.average_rating ?? "—"} <span style="font-size:0.75rem;color:#6B756E;">(${place.review_count ?? 0})</span></div>
+        </div>
+        <div class="meta-row">
+          ${place.town ? place.town + " — " : ""}${place.address || ""}
+          ${place.phone ? "<br>" + place.phone : ""}
+        </div>
+        <p>${place.description || ""}</p>
+        <div id="detail-map"></div>
+
+        <div class="reviews-section">
+          <h2 style="font-family: var(--font-display);">Reviews</h2>
+          <div id="review-form-area"></div>
+          <div id="reviews-list"></div>
+        </div>
+      `;
+
+      if (place.latitude != null && place.longitude != null) {
+        const dmap = L.map('detail-map').setView([place.latitude, place.longitude], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors',
+        }).addTo(dmap);
+        L.marker([place.latitude, place.longitude]).addTo(dmap).bindPopup(place.name).openPopup();
+      } else {
+        document.getElementById("detail-map").innerHTML = `<p style="font-family: var(--font-mono); color:#6B756E; padding:1rem;">No coordinates set for this place yet.</p>`;
+      }
+
+      renderReviewForm();
+      renderReviews(reviews);
+    } catch (err) {
+      container.innerHTML = `<p style="color:#B3261E;">Could not load this place.</p>`;
+    }
+  }
+
+  function renderReviewForm() {
+    const area = document.getElementById("review-form-area");
+    if (!isLoggedIn()) {
+      area.innerHTML = `<p style="color:#6B756E;"><a href="login.html" style="color:var(--green-deep);font-weight:600;">Log in</a> to leave a review.</p>`;
+      return;
+    }
+    area.innerHTML = `
+      <form class="review-form" id="review-form">
+        <select id="r-rating">
+          <option value="5">★★★★★ Excellent</option>
+          <option value="4">★★★★ Good</option>
+          <option value="3">★★★ Average</option>
+          <option value="2">★★ Poor</option>
+          <option value="1">★ Very poor</option>
+        </select>
+        <textarea id="r-comment" placeholder="Share your experience…" rows="3"></textarea>
+        <button type="submit" class="btn">Submit review</button>
+      </form>
+    `;
+    document.getElementById("review-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await apiSubmitReview(placeId, parseInt(document.getElementById("r-rating").value), document.getElementById("r-comment").value);
+        loadPlace();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  }
+
+  function renderReviews(reviews) {
+    const listEl = document.getElementById("reviews-list");
+    if (reviews.length === 0) {
+      listEl.innerHTML = `<p style="color:#6B756E;">No reviews yet — be the first.</p>`;
+      return;
+    }
+    listEl.innerHTML = reviews.slice().reverse().map(r => `
+      <div class="review-card">
+        <div class="review-head">
+          <span><strong>${r.username}</strong></span>
+          <span class="stars">${"★".repeat(r.rating)}${"☆".repeat(5 - r.rating)}</span>
+        </div>
+        <p style="margin:0;">${r.comment || ""}</p>
+      </div>
+    `).join("");
+  }
+
+  loadPlace();
+</script>
+</body>
+</html>

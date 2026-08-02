@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Browse — Explore Fako</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="styles.css">
+<style>
+  .browse-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; max-width: 1200px; margin: 1.5rem auto; padding: 0 2rem; align-items: start; }
+  #map { height: 640px; border-radius: 12px; box-shadow: 0 4px 14px rgba(20,35,28,0.1); position: sticky; top: 1.5rem; }
+  .browse-filters { display: flex; gap: 0.6rem; max-width: 1200px; margin: 1.5rem auto 0; padding: 0 2rem; flex-wrap: wrap; }
+  .browse-filters input, .browse-filters select { padding: 0.6rem 0.8rem; border: 1px solid #DDE0D8; border-radius: 8px; font-family: var(--font-body); }
+  .browse-list { display: flex; flex-direction: column; gap: 1rem; max-height: 640px; overflow-y: auto; padding-right: 0.3rem; }
+  .list-card { background: var(--white); border-radius: 10px; padding: 1rem; box-shadow: 0 2px 8px rgba(20,35,28,0.07); cursor: pointer; border: 2px solid transparent; }
+  .list-card:hover, .list-card.active { border-color: var(--gold); }
+  .list-card .category-tag { font-family: var(--font-mono); font-size: 0.7rem; text-transform: uppercase; color: var(--gold); }
+  .list-card h3 { font-family: var(--font-display); font-size: 1.05rem; margin: 0.2rem 0; }
+  .list-card .meta { font-size: 0.82rem; color: #6B756E; }
+  @media (max-width: 800px) {
+    .browse-layout { grid-template-columns: 1fr; }
+    #map { height: 340px; position: static; }
+  }
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="logo">Explore<span>Fako</span></div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="browse.html">Browse</a>
+    <a href="itinerary.html">My Itineraries</a>
+    <a href="login.html" id="nav-login">Log in</a>
+    <a href="admin.html" id="nav-admin" style="display:none;">Admin</a>
+    <a href="#" id="nav-logout" class="btn-primary" style="display:none;">Log out</a>
+  </nav>
+</div>
+
+<div class="section" style="padding-top:1.5rem; padding-bottom:0;">
+  <div class="section-heading">Browse &amp; find on the map</div>
+</div>
+
+<div class="browse-filters">
+  <input type="text" id="f-q" placeholder="Search by name or area…">
+  <select id="f-town">
+    <option value="">All towns</option>
+    <option value="Buea">Buea</option>
+    <option value="Limbe">Limbe</option>
+  </select>
+  <select id="f-category">
+    <option value="">All categories</option>
+  </select>
+  <button class="btn" id="apply-filters">Apply</button>
+</div>
+
+<div class="browse-layout">
+  <div id="map"></div>
+  <div class="browse-list" id="browse-list"></div>
+</div>
+
+<div class="footer" style="margin-top:2rem;">
+  Explore Fako — a distributed systems capstone project by Melvin, The ICT University.<br>
+  Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors.
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="api.js"></script>
+<script>
+  function updateNav() {
+    document.getElementById("nav-login").style.display = isLoggedIn() ? "none" : "inline";
+    document.getElementById("nav-logout").style.display = isLoggedIn() ? "inline" : "none";
+    document.getElementById("nav-admin").style.display = isAdmin() ? "inline" : "none";
+  }
+  document.getElementById("nav-logout").addEventListener("click", (e) => {
+    e.preventDefault();
+    apiLogout();
+    updateNav();
+    window.location.href = "index.html";
+  });
+  updateNav();
+
+  // Center roughly between Buea and Limbe
+  const map = L.map('map').setView([4.09, 9.20], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19,
+  }).addTo(map);
+
+  let markers = [];
+
+  function clearMarkers() {
+    markers.forEach(m => map.removeLayer(m));
+    markers = [];
+  }
+
+  function renderMapAndList(places) {
+    clearMarkers();
+    const listEl = document.getElementById("browse-list");
+
+    if (places.length === 0) {
+      listEl.innerHTML = `<p style="font-family: var(--font-mono); color:#6B756E;">No places match your search.</p>`;
+      return;
+    }
+
+    listEl.innerHTML = places.map(p => `
+      <div class="list-card" id="card-${p.id}" onclick="focusPlace('${p.id}')">
+        <div class="category-tag">${p.category || ""}</div>
+        <h3>${p.name}</h3>
+        <div class="meta">${p.town || ""} • ★ ${p.average_rating ?? "—"} (${p.review_count ?? 0} reviews)</div>
+      </div>
+    `).join("");
+
+    places.forEach(p => {
+      if (p.latitude == null || p.longitude == null) return;
+      const marker = L.marker([p.latitude, p.longitude]).addTo(map);
+      marker.bindPopup(`
+        <strong>${p.name}</strong><br>
+        <span style="font-size:0.8rem;color:#6B756E;">${p.category || ""} — ${p.town || ""}</span><br>
+        <a href="place.html?id=${p.id}" style="color:#1F4D3E;font-weight:600;">View details →</a>
+      `);
+      marker.placeId = p.id;
+      markers.push(marker);
+    });
+
+    if (markers.length > 0) {
+      const group = L.featureGroup(markers);
+      map.fitBounds(group.getBounds().pad(0.2));
+    }
+  }
+
+  function focusPlace(id) {
+    const marker = markers.find(m => m.placeId === id);
+    document.querySelectorAll(".list-card").forEach(c => c.classList.remove("active"));
+    document.getElementById(`card-${id}`)?.classList.add("active");
+    if (marker) {
+      map.setView(marker.getLatLng(), 15);
+      marker.openPopup();
+    }
+  }
+
+  async function loadCategories() {
+    try {
+      const places = await apiGetPlaces();
+      const categories = [...new Set(places.map(p => p.category).filter(Boolean))].sort();
+      const select = document.getElementById("f-category");
+      categories.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c;
+        opt.textContent = c.charAt(0).toUpperCase() + c.slice(1);
+        select.appendChild(opt);
+      });
+    } catch (err) { /* silently ignore */ }
+  }
+
+  async function applyFilters() {
+    const filters = {
+      q: document.getElementById("f-q").value,
+      town: document.getElementById("f-town").value,
+      category: document.getElementById("f-category").value,
+    };
+    try {
+      const places = await apiGetPlaces(filters);
+      renderMapAndList(places);
+    } catch (err) {
+      document.getElementById("browse-list").innerHTML = `<p style="color:#B3261E;">Could not load places.</p>`;
+    }
+  }
+
+  document.getElementById("apply-filters").addEventListener("click", applyFilters);
+
+  // Pre-fill category filter if arriving from a homepage signpost link
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialCategory = urlParams.get("category");
+
+  loadCategories().then(() => {
+    if (initialCategory) {
+      document.getElementById("f-category").value = initialCategory;
+    }
+    applyFilters();
+  });
+</script>
+</body>
+</html>

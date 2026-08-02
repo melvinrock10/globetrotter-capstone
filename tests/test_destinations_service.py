@@ -14,12 +14,12 @@ DEST_SERVICE_DIR = os.path.join(
 )
 
 SAMPLE_DATA = [
-    {"name": "Bali", "country": "Indonesia", "continent": "Asia",
-     "description": "Tropical island", "tags": ["beach", "nature"], "avg_cost_per_day": 45},
-    {"name": "Paris", "country": "France", "continent": "Europe",
-     "description": "City of lights", "tags": ["culture", "food"], "avg_cost_per_day": 150},
-    {"name": "Bangkok", "country": "Thailand", "continent": "Asia",
-     "description": "Street food capital", "tags": ["food", "budget"], "avg_cost_per_day": 35},
+    {"id": "bali-test", "name": "Bali Test Hospital", "category": "hospital", "town": "Buea",
+     "address": "Test Rd", "description": "Test hospital", "tags": ["emergency"], "rating": 4.0},
+    {"id": "paris-test", "name": "Paris Test Hotel", "category": "hotel", "town": "Limbe",
+     "address": "Test Ave", "description": "Test hotel", "tags": ["pool"], "rating": 3.0},
+    {"id": "bangkok-test", "name": "Bangkok Street Food Spot", "category": "restaurant", "town": "Buea",
+     "address": "Test St", "description": "Street food specialist", "tags": ["food", "budget"], "rating": 4.5},
 ]
 
 
@@ -36,6 +36,9 @@ def client(monkeypatch, tmp_path):
     temp_file = tmp_path / "destinations.json"
     temp_file.write_text(json.dumps(SAMPLE_DATA), encoding="utf-8")
     monkeypatch.setattr(dest_models, "DESTINATIONS_FILE", str(temp_file))
+
+    temp_reviews_file = tmp_path / "reviews.json"
+    monkeypatch.setattr(dest_models, "REVIEWS_FILE", str(temp_reviews_file))
 
     sys.modules["models"] = dest_models
     main_spec = importlib.util.spec_from_file_location(
@@ -61,20 +64,19 @@ def test_get_all_destinations(client):
 def test_filter_by_tag(client):
     resp = client.get("/destinations?tag=food")
     data = resp.get_json()
-    assert len(data) == 2
-    names = [d["name"] for d in data]
-    assert "Paris" in names and "Bangkok" in names
+    assert len(data) == 1
+    assert data[0]["name"] == "Bangkok Street Food Spot"
 
 
-def test_filter_by_max_cost(client):
-    resp = client.get("/destinations?max_cost=50")
+def test_filter_by_category(client):
+    resp = client.get("/destinations?category=hotel")
     data = resp.get_json()
-    names = [d["name"] for d in data]
-    assert names == ["Bali", "Bangkok"]
+    assert len(data) == 1
+    assert data[0]["name"] == "Paris Test Hotel"
 
 
-def test_filter_by_continent(client):
-    resp = client.get("/destinations?continent=Asia")
+def test_filter_by_town(client):
+    resp = client.get("/destinations?town=Buea")
     data = resp.get_json()
     assert len(data) == 2
 
@@ -83,9 +85,18 @@ def test_free_text_search(client):
     resp = client.get("/destinations?q=street food")
     data = resp.get_json()
     assert len(data) == 1
-    assert data[0]["name"] == "Bangkok"
+    assert data[0]["name"] == "Bangkok Street Food Spot"
 
 
-def test_invalid_max_cost_returns_400(client):
-    resp = client.get("/destinations?max_cost=notanumber")
+def test_filter_by_min_rating(client):
+    resp = client.get("/destinations?min_rating=4")
+    data = resp.get_json()
+    names = [d["name"] for d in data]
+    assert "Bali Test Hospital" in names
+    assert "Bangkok Street Food Spot" in names
+    assert "Paris Test Hotel" not in names
+
+
+def test_invalid_min_rating_returns_400(client):
+    resp = client.get("/destinations?min_rating=notanumber")
     assert resp.status_code == 400

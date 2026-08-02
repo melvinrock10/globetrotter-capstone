@@ -40,3 +40,11 @@ def save_user(user):
     users = get_all_users()
     users.append(user)
     _write_json(USERS_FILE, users)
+
+def delete_user(username):
+    users = get_all_users()
+    new_users = [u for u in users if u.get("username") != username]
+    if len(new_users) == len(users):
+        return False
+    _write_json(USERS_FILE, new_users)
+    return True

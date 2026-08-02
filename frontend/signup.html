@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sign up — Explore Fako</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="logo">Explore<span>Fako</span></div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="browse.html">Browse</a>
+  </nav>
+</div>
+
+<div class="auth-hero-bg">
+<div class="form-card">
+  <h2>Create your account</h2>
+  <form id="signup-form">
+    <label for="username">Username</label>
+    <input type="text" id="username" required>
+    <label for="password">Password</label>
+    <input type="password" id="password" required>
+    <button type="submit" class="btn">Sign up</button>
+    <div class="form-error" id="error" style="display:none;"></div>
+  </form>
+  <div class="form-switch">Already have an account? <a href="login.html">Log in</a></div>
+</div>
+
+<script src="api.js"></script>
+<script>
+  document.getElementById("signup-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errorEl = document.getElementById("error");
+    errorEl.style.display = "none";
+    try {
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+      await apiRegister(username, password);
+      await apiLogin(username, password);
+      window.location.href = "index.html";
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.style.display = "block";
+    }
+  });
+</script>
+</body>
+</html>

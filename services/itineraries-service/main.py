@@ -9,7 +9,7 @@ import datetime
 import requests
 from flask import Flask, request, jsonify
 
-from models import get_itineraries_for_user, save_itinerary
+from models import get_itineraries_for_user, save_itinerary, get_all_itineraries
 
 app = Flask(__name__)
 
@@ -64,13 +64,23 @@ def create_itinerary():
     return jsonify(itinerary), 201
 
 
-@app.route("/itineraries", methods=["GET"])
-def list_itineraries():
+@app.route("/itineraries/all", methods=["GET"])
+def list_all_itineraries():
+    """Admin-only: see itineraries across every user (for analytics)."""
     username = verify_token(request.headers.get("Authorization", ""))
     if not username:
         return jsonify({"error": "authentication required"}), 401
 
-    return jsonify(get_itineraries_for_user(username)), 200
+    try:
+        resp = requests.get(f"{AUTH_SERVICE_URL}/users/{username}", timeout=5)
+        is_admin = resp.status_code == 200 and resp.json().get("is_admin")
+    except requests.RequestException:
+        is_admin = False
+
+    if not is_admin:
+        return jsonify({"error": "admin access required"}), 403
+
+    return jsonify(get_all_itineraries()), 200
 
 
 if __name__ == "__main__":

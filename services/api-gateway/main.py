@@ -11,8 +11,10 @@ are separate services running on separate ports.
 import os
 import requests
 from flask import Flask, request, jsonify, Response
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 # Where each backend service actually lives
 AUTH_SERVICE_URL = os.environ.get("AUTH_SERVICE_URL", "http://localhost:5001")
@@ -59,14 +61,29 @@ def verify():
     return forward(AUTH_SERVICE_URL, "/verify")
 
 
-@app.route("/users/<username>", methods=["GET"])
+@app.route("/users", methods=["GET"])
+def list_users():
+    return forward(AUTH_SERVICE_URL, "/users")
+
+
+@app.route("/users/<username>", methods=["GET", "DELETE"])
 def get_user(username):
     return forward(AUTH_SERVICE_URL, f"/users/{username}")
 
 
-@app.route("/destinations", methods=["GET"])
+@app.route("/destinations", methods=["GET", "POST"])
 def destinations():
     return forward(DESTINATIONS_SERVICE_URL, "/destinations")
+
+
+@app.route("/destinations/<place_id>", methods=["GET", "PUT", "DELETE"])
+def destination_detail(place_id):
+    return forward(DESTINATIONS_SERVICE_URL, f"/destinations/{place_id}")
+
+
+@app.route("/destinations/<place_id>/reviews", methods=["GET", "POST"])
+def destination_reviews(place_id):
+    return forward(DESTINATIONS_SERVICE_URL, f"/destinations/{place_id}/reviews")
 
 
 @app.route("/recommendations", methods=["GET"])
@@ -74,9 +91,9 @@ def recommendations():
     return forward(RECOMMENDATIONS_SERVICE_URL, "/recommendations")
 
 
-@app.route("/itineraries", methods=["GET", "POST"])
-def itineraries():
-    return forward(ITINERARIES_SERVICE_URL, "/itineraries")
+@app.route("/itineraries/all", methods=["GET"])
+def all_itineraries():
+    return forward(ITINERARIES_SERVICE_URL, "/itineraries/all")
 
 
 @app.route("/health", methods=["GET"])
