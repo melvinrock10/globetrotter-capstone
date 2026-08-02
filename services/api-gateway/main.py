@@ -35,9 +35,19 @@ def forward(target_base_url, path):
             headers={k: v for k, v in request.headers if k.lower() != "host"},
             params=request.args,
             data=request.get_data(),
-            timeout=10,
+            timeout=20,
         )
-        return Response(resp.content, status=resp.status_code, content_type=resp.headers.get("Content-Type"))
+        # requests already decompresses gzip/deflate content automatically.
+        # We must NOT forward the original Content-Encoding / Content-Length /
+        # Transfer-Encoding headers, since resp.content is already decompressed
+        # — forwarding those headers makes the client try to decompress
+        # already-decompressed data, producing garbage output.
+        excluded_headers = {"content-encoding", "content-length", "transfer-encoding", "connection"}
+        response_headers = [
+            (name, value) for name, value in resp.raw.headers.items()
+            if name.lower() not in excluded_headers
+        ]
+        return Response(resp.content, status=resp.status_code, headers=response_headers)
     except requests.RequestException:
         return jsonify({"error": f"service unavailable: {target_base_url}"}), 503
 
