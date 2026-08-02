@@ -1,50 +1,33 @@
 """
 services/auth-service/models.py
-Minimal data access for the auth service: reads/writes data/users.json
-(shared with the rest of the project, one level up from /services).
+User data access, backed by MongoDB Atlas.
 """
-import json
 import os
+from pymongo import MongoClient
+from dotenv import load_dotenv
 
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DATA_DIR = os.environ.get("DATA_DIR", os.path.join(_BASE_DIR, "data"))
-USERS_FILE = os.path.join(DATA_DIR, "users.json")
+load_dotenv(os.path.join(_BASE_DIR, ".env"))
 
-
-def _read_json(filepath):
-    if not os.path.exists(filepath):
-        return []
-    with open(filepath, "r", encoding="utf-8") as fh:
-        content = fh.read().strip()
-        return json.loads(content) if content else []
-
-
-def _write_json(filepath, data):
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
-    with open(filepath, "w", encoding="utf-8") as fh:
-        json.dump(data, fh, indent=2)
+MONGO_URI = os.environ.get("MONGO_URI")
+_client = MongoClient(MONGO_URI)
+_db = _client["globetrotter"]
+_users = _db["users"]
 
 
 def get_all_users():
-    return _read_json(USERS_FILE)
+    return list(_users.find({}, {"_id": 0}))
 
 
 def get_user_by_username(username):
-    for user in get_all_users():
-        if user.get("username") == username:
-            return user
-    return None
+    return _users.find_one({"username": username}, {"_id": 0})
 
 
 def save_user(user):
-    users = get_all_users()
-    users.append(user)
-    _write_json(USERS_FILE, users)
+    _users.insert_one(dict(user))
+    return user
+
 
 def delete_user(username):
-    users = get_all_users()
-    new_users = [u for u in users if u.get("username") != username]
-    if len(new_users) == len(users):
-        return False
-    _write_json(USERS_FILE, new_users)
-    return True
+    result = _users.delete_one({"username": username})
+    return result.deleted_count > 0

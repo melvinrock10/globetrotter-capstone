@@ -22,7 +22,7 @@ from flask import Flask, request, jsonify
 
 from models import (
     get_all_places, get_place_by_id, add_place, update_place, delete_place,
-    get_reviews_for_place, add_review,
+    get_reviews_for_place, add_review, get_all_reviews,
 )
 
 app = Flask(__name__)
@@ -47,17 +47,31 @@ def get_verified_user(auth_header):
         return None, False
 
 
-def place_with_rating_summary(place):
-    """Attach average rating + review count to a place dict."""
-    reviews = get_reviews_for_place(place.get("id"))
+def place_with_rating_summary(place, reviews_by_place=None):
+    """Attach average rating + review count to a place dict.
+    If reviews_by_place (a dict of place_id -> list of reviews) is provided,
+    use it instead of querying the database again (avoids N+1 queries).
+    """
+    if reviews_by_place is not None:
+        reviews = reviews_by_place.get(place.get("id"), [])
+    else:
+        reviews = get_reviews_for_place(place.get("id"))
     result = dict(place)
     if reviews:
         result["average_rating"] = round(sum(r["rating"] for r in reviews) / len(reviews), 1)
         result["review_count"] = len(reviews)
     else:
-        result["average_rating"] = place.get("rating")  # fallback to seed rating
+        result["average_rating"] = place.get("rating")
         result["review_count"] = 0
     return result
+
+
+def _group_reviews_by_place():
+    """Fetch ALL reviews once, then group them by place_id in memory."""
+    grouped = {}
+    for review in get_all_reviews():
+        grouped.setdefault(review["place_id"], []).append(review)
+    return grouped
 
 
 # ---------------------------------------------------------------------------
@@ -80,6 +94,7 @@ def search_places():
             return jsonify({"error": "min_rating must be a number"}), 400
 
     places = get_all_places()
+    reviews_by_place = _group_reviews_by_place()
     results = []
     for place in places:
         if q:
@@ -96,7 +111,7 @@ def search_places():
             continue
         if min_rating is not None and (place.get("rating") or 0) < min_rating:
             continue
-        results.append(place_with_rating_summary(place))
+        results.append(place_with_rating_summary(place, reviews_by_place))
 
     return jsonify(results), 200
 

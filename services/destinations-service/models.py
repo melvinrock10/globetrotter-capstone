@@ -1,82 +1,54 @@
 """
 services/destinations-service/models.py
-Data access for places (formerly "destinations") and their reviews.
+Places and reviews data access, backed by MongoDB Atlas.
 """
-import json
 import os
+from pymongo import MongoClient
+from dotenv import load_dotenv
 
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DATA_DIR = os.environ.get("DATA_DIR", os.path.join(_BASE_DIR, "data"))
-DESTINATIONS_FILE = os.path.join(DATA_DIR, "destinations.json")
-REVIEWS_FILE = os.path.join(DATA_DIR, "reviews.json")
+load_dotenv(os.path.join(_BASE_DIR, ".env"))
 
+MONGO_URI = os.environ.get("MONGO_URI")
+_client = MongoClient(MONGO_URI)
+_db = _client["globetrotter"]
+_places = _db["places"]
+_reviews = _db["reviews"]
 
-def _read_json(filepath):
-    if not os.path.exists(filepath):
-        return []
-    with open(filepath, "r", encoding="utf-8") as fh:
-        content = fh.read().strip()
-        return json.loads(content) if content else []
-
-
-def _write_json(filepath, data):
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
-    with open(filepath, "w", encoding="utf-8") as fh:
-        json.dump(data, fh, indent=2)
-
-
-# ---------------------------------------------------------------------------
-# Places
-# ---------------------------------------------------------------------------
 
 def get_all_places():
-    return _read_json(DESTINATIONS_FILE)
+    return list(_places.find({}, {"_id": 0}))
 
 
 def get_place_by_id(place_id):
-    for place in get_all_places():
-        if place.get("id") == place_id:
-            return place
-    return None
+    return _places.find_one({"id": place_id}, {"_id": 0})
 
 
 def add_place(place):
-    places = get_all_places()
-    places.append(place)
-    _write_json(DESTINATIONS_FILE, places)
+    _places.insert_one(dict(place))
     return place
 
 
 def update_place(place_id, updates):
-    places = get_all_places()
-    for place in places:
-        if place.get("id") == place_id:
-            place.update(updates)
-            _write_json(DESTINATIONS_FILE, places)
-            return place
-    return None
+    result = _places.find_one_and_update(
+        {"id": place_id}, {"$set": updates}, return_document=True
+    )
+    if result:
+        result.pop("_id", None)
+    return result
 
 
 def delete_place(place_id):
-    places = get_all_places()
-    new_places = [p for p in places if p.get("id") != place_id]
-    if len(new_places) == len(places):
-        return False
-    _write_json(DESTINATIONS_FILE, new_places)
-    return True
+    result = _places.delete_one({"id": place_id})
+    return result.deleted_count > 0
 
-
-# ---------------------------------------------------------------------------
-# Reviews
-# ---------------------------------------------------------------------------
 
 def get_reviews_for_place(place_id):
-    all_reviews = _read_json(REVIEWS_FILE)
-    return [r for r in all_reviews if r.get("place_id") == place_id]
+    return list(_reviews.find({"place_id": place_id}, {"_id": 0}))
 
+def get_all_reviews():
+    return list(_reviews.find({}, {"_id": 0}))
 
 def add_review(review):
-    all_reviews = _read_json(REVIEWS_FILE)
-    all_reviews.append(review)
-    _write_json(REVIEWS_FILE, all_reviews)
+    _reviews.insert_one(dict(review))
     return review

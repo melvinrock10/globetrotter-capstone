@@ -1,38 +1,28 @@
 """
 services/itineraries-service/models.py
-Reads/writes the shared data/itineraries.json file.
+Itineraries data access, backed by MongoDB Atlas.
 """
-import json
 import os
+from pymongo import MongoClient
+from dotenv import load_dotenv
 
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DATA_DIR = os.environ.get("DATA_DIR", os.path.join(_BASE_DIR, "data"))
-ITINERARIES_FILE = os.path.join(DATA_DIR, "itineraries.json")
+load_dotenv(os.path.join(_BASE_DIR, ".env"))
 
-
-def _read_json(filepath):
-    if not os.path.exists(filepath):
-        return []
-    with open(filepath, "r", encoding="utf-8") as fh:
-        content = fh.read().strip()
-        return json.loads(content) if content else []
-
-
-def _write_json(filepath, data):
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
-    with open(filepath, "w", encoding="utf-8") as fh:
-        json.dump(data, fh, indent=2)
+MONGO_URI = os.environ.get("MONGO_URI")
+_client = MongoClient(MONGO_URI)
+_db = _client["globetrotter"]
+_itineraries = _db["itineraries"]
 
 
 def get_all_itineraries():
-    return _read_json(ITINERARIES_FILE)
+    return list(_itineraries.find({}, {"_id": 0}))
 
 
 def get_itineraries_for_user(username):
-    return [it for it in get_all_itineraries() if it.get("username") == username]
+    return list(_itineraries.find({"username": username}, {"_id": 0}))
 
 
 def save_itinerary(itinerary):
-    itineraries = get_all_itineraries()
-    itineraries.append(itinerary)
-    _write_json(ITINERARIES_FILE, itineraries)
+    _itineraries.insert_one(dict(itinerary))
+    return itinerary
