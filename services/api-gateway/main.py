@@ -47,6 +47,11 @@ def forward(target_base_url, path):
             (name, value) for name, value in resp.raw.headers.items()
             if name.lower() not in excluded_headers
         ]
+        # Explicitly set a fixed Content-Length so the response isn't sent as
+        # chunked transfer-encoding, which some HTTP clients (older Windows
+        # PowerShell in particular) handle incorrectly when combined with
+        # compression, producing corrupted output.
+        response_headers.append(("Content-Length", str(len(resp.content))))
         return Response(resp.content, status=resp.status_code, headers=response_headers)
     except requests.RequestException:
         return jsonify({"error": f"service unavailable: {target_base_url}"}), 503
