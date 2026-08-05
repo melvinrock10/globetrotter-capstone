@@ -3,7 +3,7 @@
  * Shared helper for talking to the GlobeTrotter API Gateway.
  * Every page includes this file before its own script.
  */
-const API_BASE = "http://localhost:5000";
+const API_BASE = "https://globetrotter-gateway.onrender.com";
 
 function saveSession(token, username, isAdmin) {
   localStorage.setItem("gt_token", token);
