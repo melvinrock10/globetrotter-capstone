@@ -30,8 +30,8 @@ def verify_token(auth_header):
     try:
         resp = requests.get(
             f"{AUTH_SERVICE_URL}/verify",
-            headers={"Authorization": auth_header},
-            timeout=5,
+            headers={"Authorization": auth_header, "Accept-Encoding": "identity"},
+            timeout=30,
         )
         if resp.status_code == 200:
             data = resp.json()
@@ -51,7 +51,11 @@ def get_user_preferences(username):
     dedicated endpoint.
     """
     try:
-        resp = requests.get(f"{AUTH_SERVICE_URL}/users/{username}", timeout=5)
+        resp = requests.get(
+            f"{AUTH_SERVICE_URL}/users/{username}",
+            headers={"Accept-Encoding": "identity"},
+            timeout=30,
+        )
         if resp.status_code == 200:
             return resp.json().get("preferences", [])
         return []
@@ -62,7 +66,11 @@ def get_user_preferences(username):
 def get_destinations():
     """Call destinations-service to get the full catalogue."""
     try:
-        resp = requests.get(f"{DESTINATIONS_SERVICE_URL}/destinations", timeout=5)
+        resp = requests.get(
+            f"{DESTINATIONS_SERVICE_URL}/destinations",
+            headers={"Accept-Encoding": "identity"},
+            timeout=30,
+        )
         if resp.status_code == 200:
             return resp.json()
         return []
