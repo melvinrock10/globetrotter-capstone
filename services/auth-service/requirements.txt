@@ -3,3 +3,4 @@ PyJWT==2.8.0
 Werkzeug==2.3.7
 python-dotenv==1.0.0
 pymongo==4.9.2
+gunicorn==21.2.0

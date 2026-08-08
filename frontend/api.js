@@ -68,6 +68,7 @@ async function fetchWithWakeupRetry(fetchFn) {
     }
     throw new Error("The server is taking longer than usual to start. Please try again in a moment.");
   }
+  
 }
 async function apiRegister(username, password, preferences = [], adminCode = "") {
   return fetchWithWakeupRetry(async () => {
