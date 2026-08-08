@@ -52,21 +52,23 @@ async function parseJsonSafe(resp) {
  * once more before giving up with a friendly message.
  */
 async function fetchWithWakeupRetry(fetchFn) {
+  const delays = [5000, 10000, 15000, 20000]; // up to ~50s total, matching real Render wake times
   try {
     return await fetchFn();
   } catch (err) {
-    if (err.message === "SERVER_WAKING_UP") {
-      await sleep(4000);
+    if (err.message !== "SERVER_WAKING_UP") throw err;
+    for (const delay of delays) {
+      await sleep(delay);
       try {
         return await fetchFn();
       } catch (err2) {
-        throw new Error("The server is still starting up. Please wait a few seconds and try again.");
+        if (err2.message !== "SERVER_WAKING_UP") throw err2;
+        // otherwise keep retrying with the next delay
       }
     }
-    throw err;
+    throw new Error("The server is taking longer than usual to start. Please try again in a moment.");
   }
 }
-
 async function apiRegister(username, password, preferences = [], adminCode = "") {
   return fetchWithWakeupRetry(async () => {
     const resp = await fetch(`${API_BASE}/register`, {
