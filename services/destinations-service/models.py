@@ -14,6 +14,7 @@ _client = MongoClient(MONGO_URI)
 _db = _client["globetrotter"]
 _places = _db["places"]
 _reviews = _db["reviews"]
+_settings = _db["settings"]
 
 
 def get_all_places():
@@ -52,3 +53,19 @@ def get_all_reviews():
 def add_review(review):
     _reviews.insert_one(dict(review))
     return review
+
+def get_settings():
+    """Site-wide settings (fare rates, etc). Single document."""
+    settings = _settings.find_one({"_id": "site_settings"}, {"_id": 0})
+    if not settings:
+        return {"taxi_rate_per_km": None, "bike_rate_per_km": None}
+    return settings
+
+
+def update_settings(updates):
+    _settings.update_one(
+        {"_id": "site_settings"},
+        {"$set": updates},
+        upsert=True,
+    )
+    return get_settings()

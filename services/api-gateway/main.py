@@ -81,6 +81,9 @@ def get_user(username):
 def destinations():
     return forward(DESTINATIONS_SERVICE_URL, "/destinations")
 
+@app.route("/settings", methods=["GET", "PUT"])
+def settings():
+    return forward(DESTINATIONS_SERVICE_URL, "/settings")
 
 @app.route("/destinations/<place_id>", methods=["GET", "PUT", "DELETE"])
 def destination_detail(place_id):

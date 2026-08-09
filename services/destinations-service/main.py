@@ -23,6 +23,7 @@ from flask import Flask, request, jsonify
 from models import (
     get_all_places, get_place_by_id, add_place, update_place, delete_place,
     get_reviews_for_place, add_review, get_all_reviews,
+    get_settings, update_settings,
 )
 
 app = Flask(__name__)
@@ -154,6 +155,7 @@ def create_place():
         "longitude": data.get("longitude"),
         "rating": data.get("rating"),
         "image_url": data.get("image_url", ""),
+        "details": data.get("details", []),
         "added_by": username,
         "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     }
@@ -170,7 +172,7 @@ def edit_place(place_id):
         return jsonify({"error": "admin access required"}), 403
 
     data = request.get_json(silent=True) or {}
-    allowed_fields = ["name", "category", "town", "address", "description", "tags", "phone", "latitude", "longitude", "rating", "image_url"]
+    allowed_fields = ["name", "category", "town", "address", "description", "tags", "phone", "latitude", "longitude", "rating", "image_url", "details"]
     updates = {k: v for k, v in data.items() if k in allowed_fields}
 
     updated = update_place(place_id, updates)
@@ -238,6 +240,26 @@ def list_reviews(place_id):
     reviews = get_reviews_for_place(place_id)
     return jsonify(reviews), 200
 
+@app.route("/settings", methods=["GET"])
+def get_site_settings():
+    """Public: anyone can read the current fare rates."""
+    return jsonify(get_settings()), 200
+
+
+@app.route("/settings", methods=["PUT"])
+def update_site_settings():
+    """Admin-only: update fare rates and other site settings."""
+    username, is_admin = get_verified_user(request.headers.get("Authorization", ""))
+    if not username:
+        return jsonify({"error": "authentication required"}), 401
+    if not is_admin:
+        return jsonify({"error": "admin access required"}), 403
+
+    data = request.get_json(silent=True) or {}
+    allowed = {"taxi_rate_per_km", "bike_rate_per_km"}
+    updates = {k: v for k, v in data.items() if k in allowed}
+    updated = update_settings(updates)
+    return jsonify(updated), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5002, debug=False)
