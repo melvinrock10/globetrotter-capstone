@@ -252,3 +252,25 @@ async function apiGetAllItineraries() {
     return data;
   });
 }
+
+async function apiGetSettings() {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/settings`);
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) throw new Error(data.error || "Failed to load settings");
+    return data;
+  });
+}
+
+async function apiUpdateSettings(updates) {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/settings`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(updates),
+    });
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) throw new Error(data.error || "Failed to update settings");
+    return data;
+  });
+}

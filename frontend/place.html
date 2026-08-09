@@ -22,6 +22,15 @@
   .review-card { background: var(--white); border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 0.8rem; box-shadow: 0 2px 8px rgba(20,35,28,0.06); }
   .review-card .review-head { display: flex; justify-content: space-between; font-size: 0.85rem; color: #6B756E; margin-bottom: 0.4rem; }
   .review-card .stars { color: var(--gold); font-family: var(--font-mono); }
+  .details-box { margin: 1.5rem 0; background: var(--white); border-radius: 12px; padding: 1.2rem 1.4rem; box-shadow: 0 2px 8px rgba(20,35,28,0.07); }
+  .details-table { width: 100%; border-collapse: collapse; margin-top: 0.6rem; }
+  .details-table td { padding: 0.5rem 0; border-bottom: 1px solid #EDEFEA; font-size: 0.92rem; }
+  .details-table td:first-child { color: #4A544D; }
+  .details-table td:last-child { text-align: right; font-weight: 600; color: var(--green-deep); font-family: var(--font-mono); }
+  .distance-box { margin: 1.5rem 0; background: var(--mist); border-radius: 12px; padding: 1.2rem 1.4rem; }
+  .fare-card { display: flex; gap: 1rem; margin-top: 0.8rem; flex-wrap: wrap; }
+  .fare-pill { background: var(--white); border-radius: 10px; padding: 0.8rem 1.2rem; font-family: var(--font-mono); font-size: 0.9rem; }
+  .fare-pill strong { display: block; font-size: 1.1rem; color: var(--green-deep); font-family: var(--font-body); }
 </style>
 </head>
 <body>
@@ -86,6 +95,21 @@
           ${place.phone ? "<br>" + place.phone : ""}
         </div>
         <p>${place.description || ""}</p>
+
+        ${place.details && place.details.length ? `
+          <div class="details-box">
+            <h3 style="font-family: var(--font-display); font-size:1.1rem;">What this place offers</h3>
+            <table class="details-table">
+              ${place.details.map(d => `<tr><td>${d.label}</td><td>${d.value}</td></tr>`).join("")}
+            </table>
+          </div>
+        ` : ""}
+
+        <div id="distance-box" class="distance-box">
+          <button class="btn" id="find-distance-btn">📍 Find distance &amp; fare from my location</button>
+          <div id="distance-result" style="margin-top:0.8rem;"></div>
+        </div>
+
         <div id="detail-map"></div>
 
         <div class="reviews-section">
@@ -94,6 +118,11 @@
           <div id="reviews-list"></div>
         </div>
       `;
+
+      const findBtn = document.getElementById("find-distance-btn");
+      if (findBtn) {
+        findBtn.addEventListener("click", () => findDistanceAndFare(place.latitude, place.longitude));
+      }
 
       if (place.latitude != null && place.longitude != null) {
         const dmap = L.map('detail-map').setView([place.latitude, place.longitude], 15);
