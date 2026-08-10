@@ -69,6 +69,69 @@
   const params = new URLSearchParams(window.location.search);
   const placeId = params.get("id");
 
+  function toRad(deg) { return deg * (Math.PI / 180); }
+
+  function haversineDistanceKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  async function findDistanceAndFare(placeLat, placeLng) {
+    const resultEl = document.getElementById("distance-result");
+    const btn = document.getElementById("find-distance-btn");
+
+    if (!navigator.geolocation) {
+      resultEl.innerHTML = `<p style="color:#B3261E;">Your browser doesn't support location services.</p>`;
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Locating…";
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+        const distanceKm = haversineDistanceKm(userLat, userLng, placeLat, placeLng);
+
+        let ratesHtml = "";
+        try {
+          const settings = await apiGetSettings();
+          const taxiFare = settings.taxi_rate_per_km ? Math.round(distanceKm * settings.taxi_rate_per_km) : null;
+          const bikeFare = settings.bike_rate_per_km ? Math.round(distanceKm * settings.bike_rate_per_km) : null;
+          ratesHtml = `
+            <div class="fare-card">
+              ${taxiFare != null ? `<div class="fare-pill"><strong>${taxiFare.toLocaleString()} FCFA</strong>Estimated taxi fare</div>` : ""}
+              ${bikeFare != null ? `<div class="fare-pill"><strong>${bikeFare.toLocaleString()} FCFA</strong>Estimated bike/moto fare</div>` : ""}
+            </div>
+          `;
+        } catch (err) {
+          ratesHtml = `<p style="color:#6B756E; font-size:0.85rem;">Fare rates not set yet.</p>`;
+        }
+
+        resultEl.innerHTML = `
+          <p style="font-family: var(--font-mono); color: var(--green-deep); font-weight:600;">
+            ~${distanceKm.toFixed(1)} km from your current location
+          </p>
+          ${ratesHtml}
+        `;
+        btn.style.display = "none";
+      },
+      (error) => {
+        resultEl.innerHTML = `<p style="color:#B3261E;">Could not get your location. Please allow location access and try again.</p>`;
+        btn.disabled = false;
+        btn.textContent = "📍 Find distance & fare from my location";
+      }
+    );
+  }
+
   async function loadPlace() {
     const container = document.getElementById("place-detail");
     if (!placeId) {
