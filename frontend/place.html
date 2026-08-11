@@ -69,6 +69,10 @@
   const params = new URLSearchParams(window.location.search);
   const placeId = params.get("id");
 
+  let dmap = null;
+  let userMarker = null;
+  let routeLine = null;
+
   function toRad(deg) { return deg * (Math.PI / 180); }
 
   function haversineDistanceKm(lat1, lon1, lat2, lon2) {
@@ -121,17 +125,68 @@
             ~${distanceKm.toFixed(1)} km from your current location
           </p>
           ${ratesHtml}
+          <button class="btn" id="cancel-route-btn" style="background:#6B756E; margin-top:0.6rem;">Cancel route</button>
         `;
         btn.style.display = "none";
+
+        if (dmap) {
+          if (userMarker) dmap.removeLayer(userMarker);
+          if (routeLine) dmap.removeLayer(routeLine);
+
+          userMarker = L.circleMarker([userLat, userLng], {
+            radius: 8, color: "#C98A2C", fillColor: "#C98A2C", fillOpacity: 0.9,
+          }).addTo(dmap).bindPopup("Your location");
+
+          try {
+            const routeResp = await fetch(
+              `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${placeLng},${placeLat}?overview=full&geometries=geojson`
+            );
+            const routeData = await routeResp.json();
+            if (routeData.routes && routeData.routes[0]) {
+              const coords = routeData.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+              routeLine = L.polyline(coords, { color: "#1F4D3E", weight: 4, opacity: 0.8 }).addTo(dmap);
+              dmap.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+            } else {
+              dmap.fitBounds(L.latLngBounds([[userLat, userLng], [placeLat, placeLng]]), { padding: [30, 30] });
+            }
+          } catch (err) {
+            dmap.fitBounds(L.latLngBounds([[userLat, userLng], [placeLat, placeLng]]), { padding: [30, 30] });
+          }
+        }
+
+        document.getElementById("cancel-route-btn").addEventListener("click", () => {
+          if (userMarker && dmap) dmap.removeLayer(userMarker);
+          if (routeLine && dmap) dmap.removeLayer(routeLine);
+          userMarker = null;
+          routeLine = null;
+          if (dmap) dmap.setView([placeLat, placeLng], 15);
+          resultEl.innerHTML = "";
+          btn.style.display = "inline-block";
+          btn.disabled = false;
+          btn.textContent = "📍 Share my location to see distance & fare";
+        });
       },
       (error) => {
-        resultEl.innerHTML = `<p style="color:#B3261E;">Could not get your location. Please allow location access and try again.</p>`;
+        resultEl.innerHTML = `<p style="color:#B3261E;">Could not get your location. Please allow location access in your browser and try again.</p>`;
         btn.disabled = false;
-        btn.textContent = "📍 Find distance & fare from my location";
+        btn.textContent = "📍 Share my location to see distance & fare";
       }
     );
   }
 
+  function renderDistanceBox(place) {
+    const box = document.getElementById("distance-box");
+    if (!isLoggedIn()) {
+      box.innerHTML = `<p style="color:#6B756E;">📍 <a href="login.html" style="color:var(--green-deep);font-weight:600;">Log in</a> to see distance and estimated fare from your location.</p>`;
+      return;
+    }
+    box.innerHTML = `
+      <p style="font-size:0.88rem; color:#4A544D; margin-bottom:0.7rem;">We'll use your device's location just once, only to estimate distance and fare — it's never stored or shared.</p>
+      <button class="btn" id="find-distance-btn">📍 Share my location to see distance &amp; fare</button>
+      <div id="distance-result" style="margin-top:0.8rem;"></div>
+    `;
+    document.getElementById("find-distance-btn").addEventListener("click", () => findDistanceAndFare(place.latitude, place.longitude));
+  }
   async function loadPlace() {
     const container = document.getElementById("place-detail");
     if (!placeId) {
@@ -168,10 +223,7 @@
           </div>
         ` : ""}
 
-        <div id="distance-box" class="distance-box">
-          <button class="btn" id="find-distance-btn">📍 Find distance &amp; fare from my location</button>
-          <div id="distance-result" style="margin-top:0.8rem;"></div>
-        </div>
+        <div id="distance-box" class="distance-box"></div>
 
         <div id="detail-map"></div>
 
@@ -182,13 +234,8 @@
         </div>
       `;
 
-      const findBtn = document.getElementById("find-distance-btn");
-      if (findBtn) {
-        findBtn.addEventListener("click", () => findDistanceAndFare(place.latitude, place.longitude));
-      }
-
       if (place.latitude != null && place.longitude != null) {
-        const dmap = L.map('detail-map').setView([place.latitude, place.longitude], 15);
+        dmap = L.map('detail-map').setView([place.latitude, place.longitude], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; OpenStreetMap contributors',
         }).addTo(dmap);
@@ -197,6 +244,7 @@
         document.getElementById("detail-map").innerHTML = `<p style="font-family: var(--font-mono); color:#6B756E; padding:1rem;">No coordinates set for this place yet.</p>`;
       }
 
+      renderDistanceBox(place);
       renderReviewForm();
       renderReviews(reviews);
     } catch (err) {
