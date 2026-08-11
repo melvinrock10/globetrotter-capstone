@@ -53,6 +53,8 @@
     <option value="">All categories</option>
   </select>
   <button class="btn" id="apply-filters">Apply</button>
+  <button class="btn" id="near-me-btn" style="background:var(--gold); color:var(--green-dark);">📍 Near me now</button>
+</div>
 </div>
 
 <div class="browse-layout">
@@ -89,6 +91,7 @@
   }).addTo(map);
 
   let markers = [];
+  let userLocation = null;
 
   function clearMarkers() {
     markers.forEach(m => map.removeLayer(m));
@@ -99,20 +102,38 @@
     clearMarkers();
     const listEl = document.getElementById("browse-list");
 
-    if (places.length === 0) {
+    let displayPlaces = places;
+    if (userLocation) {
+      displayPlaces = places
+        .filter(p => p.latitude != null && p.longitude != null)
+        .map(p => ({
+          ...p,
+          _distanceKm: haversineDistanceKmShared(userLocation.lat, userLocation.lng, p.latitude, p.longitude),
+        }))
+        .sort((a, b) => a._distanceKm - b._distanceKm);
+    }
+
+    if (displayPlaces.length === 0) {
       listEl.innerHTML = `<p style="font-family: var(--font-mono); color:#6B756E;">No places match your search.</p>`;
       return;
     }
 
-    listEl.innerHTML = places.map(p => `
+    listEl.innerHTML = displayPlaces.map(p => `
       <div class="list-card" id="card-${p.id}" onclick="focusPlace('${p.id}')">
         <div class="category-tag">${p.category || ""}</div>
         <h3>${p.name}</h3>
-        <div class="meta">${p.town || ""} • ★ ${p.average_rating ?? "—"} (${p.review_count ?? 0} reviews)</div>
+        <div class="meta">${p.town || ""} • ★ ${p.average_rating ?? "—"} (${p.review_count ?? 0} reviews)${p._distanceKm != null ? ` • <strong style="color:var(--green-deep);">${p._distanceKm.toFixed(1)} km away</strong>` : ""}</div>
       </div>
     `).join("");
 
-    places.forEach(p => {
+    if (userLocation) {
+      const youMarker = L.circleMarker([userLocation.lat, userLocation.lng], {
+        radius: 8, color: "#C98A2C", fillColor: "#C98A2C", fillOpacity: 0.9,
+      }).addTo(map).bindPopup("You are here");
+      markers.push(youMarker);
+    }
+
+    displayPlaces.forEach(p => {
       if (p.latitude == null || p.longitude == null) return;
       const marker = L.marker([p.latitude, p.longitude]).addTo(map);
       marker.bindPopup(`
@@ -169,6 +190,28 @@
   }
 
   document.getElementById("apply-filters").addEventListener("click", applyFilters);
+
+  document.getElementById("near-me-btn").addEventListener("click", () => {
+    const btn = document.getElementById("near-me-btn");
+    if (!navigator.geolocation) {
+      alert("Your browser doesn't support location services.");
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = "Locating…";
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+        btn.textContent = "📍 Sorted by distance";
+        applyFilters();
+      },
+      () => {
+        alert("Could not get your location. Please allow location access and try again.");
+        btn.disabled = false;
+        btn.textContent = "📍 Near me now";
+      }
+    );
+  });
 
   // Pre-fill category filter if arriving from a homepage signpost link
   const urlParams = new URLSearchParams(window.location.search);

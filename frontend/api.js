@@ -274,3 +274,17 @@ async function apiUpdateSettings(updates) {
     return data;
   });
 }
+
+function toRadShared(deg) { return deg * (Math.PI / 180); }
+
+function haversineDistanceKmShared(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = toRadShared(lat2 - lat1);
+  const dLon = toRadShared(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadShared(lat1)) * Math.cos(toRadShared(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
