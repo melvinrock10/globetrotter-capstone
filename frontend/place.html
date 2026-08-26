@@ -46,7 +46,11 @@
   </nav>
 </div>
 
+<div class="breadcrumb">
+  <a href="index.html">Home</a> <span class="sep">/</span> <a href="browse.html">Browse</a> <span class="sep">/</span> <span id="crumb-current">Place</span>
+</div>
 <div class="place-detail" id="place-detail">
+  <button class="back-btn" onclick="history.back()">← Back</button>
   <p style="font-family: var(--font-mono); color:#6B756E;">Loading…</p>
 </div>
 
@@ -195,6 +199,7 @@
     }
     try {
       const place = await apiGetPlace(placeId);
+      document.getElementById("crumb-current").textContent = place.name;
       const reviews = await apiGetReviews(placeId);
 
       container.innerHTML = `
@@ -232,6 +237,7 @@
           <div id="review-form-area"></div>
           <div id="reviews-list"></div>
         </div>
+        <div id="prev-next-area"></div>
       `;
 
       if (place.latitude != null && place.longitude != null) {
@@ -246,10 +252,30 @@
 
       renderDistanceBox(place);
       renderReviewForm();
+      renderPrevNext();
       renderReviews(reviews);
     } catch (err) {
       container.innerHTML = `<p style="color:#B3261E;">Could not load this place.</p>`;
     }
+  }
+
+    function renderPrevNext() {
+    const area = document.getElementById("prev-next-area");
+    const listRaw = sessionStorage.getItem("gt_place_list");
+    if (!listRaw) { area.innerHTML = ""; return; }
+    const list = JSON.parse(listRaw);
+    const idx = list.indexOf(placeId);
+    if (idx === -1) { area.innerHTML = ""; return; }
+
+    const prevId = idx > 0 ? list[idx - 1] : null;
+    const nextId = idx < list.length - 1 ? list[idx + 1] : null;
+
+    area.innerHTML = `
+      <div class="prev-next-row">
+        ${prevId ? `<a href="place.html?id=${prevId}"><div class="label">← Previous</div><div class="name">View previous place</div></a>` : `<div></div>`}
+        ${nextId ? `<a href="place.html?id=${nextId}" class="next-item"><div class="label">Next →</div><div class="name">View next place</div></a>` : `<div></div>`}
+      </div>
+    `;
   }
 
   function renderReviewForm() {

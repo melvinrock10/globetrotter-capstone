@@ -9,7 +9,7 @@ import datetime
 import requests
 from flask import Flask, request, jsonify
 
-from models import get_itineraries_for_user, save_itinerary, get_all_itineraries
+from models import get_itineraries_for_user, save_itinerary, get_all_itineraries, update_itinerary
 
 app = Flask(__name__)
 
@@ -81,6 +81,21 @@ def list_all_itineraries():
         return jsonify({"error": "admin access required"}), 403
 
     return jsonify(get_all_itineraries()), 200
+
+@app.route("/itineraries/<itinerary_id>", methods=["PUT"])
+def edit_itinerary(itinerary_id):
+    username = verify_token(request.headers.get("Authorization", ""))
+    if not username:
+        return jsonify({"error": "authentication required"}), 401
+
+    data = request.get_json(silent=True) or {}
+    allowed = {"title", "destinations", "start_date", "end_date", "notes"}
+    updates = {k: v for k, v in data.items() if k in allowed}
+
+    updated = update_itinerary(itinerary_id, username, updates)
+    if not updated:
+        return jsonify({"error": "itinerary not found"}), 404
+    return jsonify(updated), 200
 
 
 if __name__ == "__main__":

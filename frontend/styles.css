@@ -274,3 +274,13 @@ a { color: inherit; text-decoration: none; }
 .form-error { color: #B3261E; font-size: 0.85rem; margin-top: 0.6rem; }
 .form-switch { text-align: center; margin-top: 1rem; font-size: 0.9rem; }
 .form-switch a { color: var(--green-deep); font-weight: 600; }
+
+.breadcrumb { max-width: 800px; margin: 1.2rem auto 0; padding: 0 2rem; font-family: var(--font-mono); font-size: 0.82rem; color: #6B756E; }
+.breadcrumb a { color: var(--green-deep); }
+.breadcrumb .sep { margin: 0 0.4rem; }
+.back-btn { display: inline-flex; align-items: center; gap: 0.3rem; background: none; border: none; color: var(--green-deep); font-weight: 600; font-size: 0.9rem; cursor: pointer; padding: 0; margin-bottom: 0.6rem; }
+.prev-next-row { display: flex; justify-content: space-between; max-width: 800px; margin: 2rem auto; padding: 0 2rem; gap: 1rem; }
+.prev-next-row a { flex: 1; background: var(--white); border-radius: 10px; padding: 0.9rem 1.1rem; box-shadow: 0 2px 8px rgba(20,35,28,0.07); font-size: 0.88rem; }
+.prev-next-row .label { font-family: var(--font-mono); font-size: 0.7rem; color: #6B756E; text-transform: uppercase; }
+.prev-next-row .name { font-weight: 600; color: var(--green-deep); }
+.prev-next-row .next-item { text-align: right; }

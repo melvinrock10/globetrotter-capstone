@@ -26,3 +26,14 @@ def get_itineraries_for_user(username):
 def save_itinerary(itinerary):
     _itineraries.insert_one(dict(itinerary))
     return itinerary
+
+
+def update_itinerary(itinerary_id, username, updates):
+    result = _itineraries.find_one_and_update(
+        {"id": itinerary_id, "username": username},
+        {"$set": updates},
+        return_document=True,
+    )
+    if result:
+        result.pop("_id", None)
+    return result

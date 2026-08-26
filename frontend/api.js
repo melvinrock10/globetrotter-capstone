@@ -3,7 +3,7 @@
  * Shared helper for talking to the GlobeTrotter API Gateway.
  * Every page includes this file before its own script.
  */
-const API_BASE = "https://globetrotter-gateway.onrender.com";
+   const API_BASE = "http://localhost:5000";
 
 function saveSession(token, username, isAdmin) {
   localStorage.setItem("gt_token", token);
@@ -287,4 +287,18 @@ function haversineDistanceKmShared(lat1, lon1, lat2, lon2) {
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+}
+
+
+async function apiUpdateItinerary(id, updates) {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/itineraries/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(updates),
+    });
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) throw new Error(data.error || "Failed to update itinerary");
+    return data;
+  });
 }

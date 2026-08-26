@@ -85,6 +85,7 @@
 
   function renderPlaces(places) {
     const grid = document.getElementById("place-grid");
+    sessionStorage.setItem("gt_place_list", JSON.stringify(places.map(p => p.id)));
     if (places.length === 0) {
       grid.innerHTML = `<p style="font-family: var(--font-mono); color:#6B756E;">No places found. Try a different search.</p>`;
       return;

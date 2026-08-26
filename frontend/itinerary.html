@@ -72,16 +72,32 @@
         listEl.innerHTML = `<p style="color:#6B756E;">No itineraries yet — plan your first trip above.</p>`;
         return;
       }
-      listEl.innerHTML = items.slice().reverse().map(it => `
-        <div class="itin-card">
+            listEl.innerHTML = items.slice().reverse().map(it => `
+        <div class="itin-card" id="itin-${it.id}">
           <h3>${it.title}</h3>
           <div class="dates">${it.start_date || "?"} → ${it.end_date || "?"}</div>
-          <div class="places">Places: ${(it.destinations || []).join(", ") || "—"}</div>
+          <div class="places" id="places-${it.id}">Places: ${(it.destinations || []).join(", ") || "—"}</div>
           ${it.notes ? `<p style="margin-top:0.5rem;">${it.notes}</p>` : ""}
+          <div style="margin-top:0.6rem; display:flex; gap:0.5rem;">
+            <input type="text" id="swap-input-${it.id}" placeholder="New place list, comma separated" style="flex:1; padding:0.4rem 0.6rem; border:1px solid #DDE0D8; border-radius:6px;">
+            <button class="btn" style="padding:0.4rem 0.9rem;" onclick="swapCheckpoints('${it.id}')">Update checkpoints</button>
+          </div>
         </div>
       `).join("");
     } catch (err) {
       listEl.innerHTML = `<p style="color:#B3261E;">Could not load itineraries.</p>`;
+    }
+  }
+
+    async function swapCheckpoints(id) {
+    const input = document.getElementById(`swap-input-${id}`);
+    const newPlaces = input.value.split(",").map(p => p.trim()).filter(Boolean);
+    if (newPlaces.length === 0) { alert("Enter at least one place."); return; }
+    try {
+      await apiUpdateItinerary(id, { destinations: newPlaces });
+      loadItineraries();
+    } catch (err) {
+      alert(err.message);
     }
   }
 

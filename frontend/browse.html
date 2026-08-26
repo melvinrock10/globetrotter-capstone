@@ -101,6 +101,7 @@
   function renderMapAndList(places) {
     clearMarkers();
     const listEl = document.getElementById("browse-list");
+    sessionStorage.setItem("gt_place_list", JSON.stringify((userLocation ? places.filter(p => p.latitude != null && p.longitude != null).sort((a,b) => haversineDistanceKmShared(userLocation.lat, userLocation.lng, a.latitude, a.longitude) - haversineDistanceKmShared(userLocation.lat, userLocation.lng, b.latitude, b.longitude)) : places).map(p => p.id)));
 
     let displayPlaces = places;
     if (userLocation) {
