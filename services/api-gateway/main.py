@@ -100,9 +100,15 @@ def recommendations():
     return forward(RECOMMENDATIONS_SERVICE_URL, "/recommendations")
 
 
+@app.route("/itineraries", methods=["GET", "POST"])
+def itineraries():
+    return forward(ITINERARIES_SERVICE_URL, "/itineraries")
+
+
 @app.route("/itineraries/all", methods=["GET"])
 def all_itineraries():
     return forward(ITINERARIES_SERVICE_URL, "/itineraries/all")
+
 
 @app.route("/itineraries/<itinerary_id>", methods=["PUT"])
 def itinerary_detail(itinerary_id):

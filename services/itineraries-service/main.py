@@ -34,6 +34,14 @@ def verify_token(auth_header):
         return None
 
 
+@app.route("/itineraries", methods=["GET"])
+def list_itineraries():
+    username = verify_token(request.headers.get("Authorization", ""))
+    if not username:
+        return jsonify({"error": "authentication required"}), 401
+    return jsonify(get_itineraries_for_user(username)), 200
+
+
 @app.route("/itineraries", methods=["POST"])
 def create_itinerary():
     username = verify_token(request.headers.get("Authorization", ""))
