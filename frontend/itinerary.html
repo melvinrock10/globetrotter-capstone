@@ -39,7 +39,9 @@
       <h3 style="font-family: var(--font-display); margin-top:0;">Plan a new trip</h3>
       <input type="text" id="i-title" placeholder="Trip title (e.g. Weekend in Limbe)">
       <input type="text" id="i-places" placeholder="Places (comma separated place names)">
+      <label style="font-size:0.82rem; font-weight:600; display:block; margin-bottom:0.2rem;">Start date</label>
       <input type="date" id="i-start">
+      <label style="font-size:0.82rem; font-weight:600; display:block; margin:0.6rem 0 0.2rem;">End date</label>
       <input type="date" id="i-end">
       <input type="text" id="i-notes" placeholder="Notes (optional)">
       <button class="btn" id="add-itin-btn">Add itinerary</button>
@@ -76,7 +78,7 @@
         <div class="itin-card" id="itin-${it.id}">
           <h3>${it.title}</h3>
           <div class="dates">${it.start_date || "?"} → ${it.end_date || "?"}</div>
-          <div class="places" id="places-${it.id}">Places: ${(it.destinations || []).join(", ") || "—"}</div>
+          <div class="places" id="places-${it.id}">Places: ${(it.destinations || []).map(d => `<a href="browse.html?q=${encodeURIComponent(d)}" style="color:var(--green-deep); font-weight:600;">${d}</a>`).join(", ") || "—"}</div>
           ${it.notes ? `<p style="margin-top:0.5rem;">${it.notes}</p>` : ""}
           <div style="margin-top:0.6rem; display:flex; gap:0.5rem;">
             <input type="text" id="swap-input-${it.id}" placeholder="New place list, comma separated" style="flex:1; padding:0.4rem 0.6rem; border:1px solid #DDE0D8; border-radius:6px;">
@@ -100,10 +102,21 @@
       alert(err.message);
     }
   }
+  
+  const today = new Date().toISOString().split("T")[0];
+  document.getElementById("i-start").min = today;
+  document.getElementById("i-end").min = today;
+  document.getElementById("i-start").addEventListener("change", () => {
+    document.getElementById("i-end").min = document.getElementById("i-start").value || today;
+  });
 
   document.getElementById("add-itin-btn").addEventListener("click", async () => {
     const title = document.getElementById("i-title").value.trim();
     if (!title) { alert("Please enter a trip title."); return; }
+    const startVal = document.getElementById("i-start").value;
+    const endVal = document.getElementById("i-end").value;
+    if (startVal && startVal < today) { alert("Start date can't be in the past."); return; }
+    if (startVal && endVal && endVal < startVal) { alert("End date can't be before the start date."); return; }
     const places = document.getElementById("i-places").value.split(",").map(p => p.trim()).filter(Boolean);
     try {
       await apiCreateItinerary({
