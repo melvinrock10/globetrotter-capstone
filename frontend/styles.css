@@ -284,3 +284,9 @@ a { color: inherit; text-decoration: none; }
 .prev-next-row .label { font-family: var(--font-mono); font-size: 0.7rem; color: #6B756E; text-transform: uppercase; }
 .prev-next-row .name { font-weight: 600; color: var(--green-deep); }
 .prev-next-row .next-item { text-align: right; }
+
+
+#toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 0.6rem; }
+.toast { background: var(--green-dark); color: white; padding: 0.8rem 1.2rem; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.2); font-size: 0.9rem; opacity: 0; transform: translateY(10px); transition: opacity 0.25s ease, transform 0.25s ease; }
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.error { background: #B3261E; }

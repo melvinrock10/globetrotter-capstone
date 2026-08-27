@@ -80,7 +80,7 @@
         listEl.innerHTML = `<p style="color:#6B756E;">No itineraries yet — plan your first trip above.</p>`;
         return;
       }
-            listEl.innerHTML = items.slice().reverse().map(it => `
+      listEl.innerHTML = items.slice().reverse().map(it => `
         <div class="itin-card" id="itin-${it.id}">
           <h3>${it.title}</h3>
           <div class="dates">${it.start_date || "?"} → ${it.end_date || "?"}</div>
@@ -97,18 +97,19 @@
     }
   }
 
-    async function swapCheckpoints(id) {
+  async function swapCheckpoints(id) {
     const input = document.getElementById(`swap-input-${id}`);
     const newPlaces = input.value.split(",").map(p => p.trim()).filter(Boolean);
-    if (newPlaces.length === 0) { alert("Enter at least one place."); return; }
+    if (newPlaces.length === 0) { showToast("Enter at least one place.", true); return; }
     try {
       await apiUpdateItinerary(id, { destinations: newPlaces });
+      showToast("Checkpoints updated!");
       loadItineraries();
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, true);
     }
   }
-  
+
   const today = new Date().toISOString().split("T")[0];
   document.getElementById("i-start").min = today;
   document.getElementById("i-end").min = today;
@@ -118,11 +119,11 @@
 
   document.getElementById("add-itin-btn").addEventListener("click", async () => {
     const title = document.getElementById("i-title").value.trim();
-    if (!title) { alert("Please enter a trip title."); return; }
+    if (!title) { showToast("Please enter a trip title.", true); return; }
     const startVal = document.getElementById("i-start").value;
     const endVal = document.getElementById("i-end").value;
-    if (startVal && startVal < today) { alert("Start date can't be in the past."); return; }
-    if (startVal && endVal && endVal < startVal) { alert("End date can't be before the start date."); return; }
+    if (startVal && startVal < today) { showToast("Start date can't be in the past.", true); return; }
+    if (startVal && endVal && endVal < startVal) { showToast("End date can't be before the start date.", true); return; }
     const places = document.getElementById("i-places").value.split(",").map(p => p.trim()).filter(Boolean);
     try {
       await apiCreateItinerary({
@@ -137,9 +138,10 @@
       document.getElementById("i-start").value = "";
       document.getElementById("i-end").value = "";
       document.getElementById("i-notes").value = "";
+      showToast("Itinerary saved!");
       loadItineraries();
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, true);
     }
   });
 </script>

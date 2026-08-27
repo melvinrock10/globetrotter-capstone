@@ -307,9 +307,10 @@
       e.preventDefault();
       try {
         await apiSubmitReview(placeId, parseInt(document.getElementById("r-rating").value), document.getElementById("r-comment").value);
+        showToast("Review submitted!");
         loadPlace();
       } catch (err) {
-        alert(err.message);
+        showToast(err.message, true);
       }
     });
   }
