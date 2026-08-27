@@ -1,0 +1,13 @@
+{
+  "name": "Explore Fako",
+  "short_name": "ExploreFako",
+  "description": "Your local guide to Buea and Limbe — hospitals, hotels, restaurants and more.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#EDEFEA",
+  "theme_color": "#1F4D3E",
+  "icons": [
+    { "src": "images/logo.svg", "sizes": "192x192", "type": "image/svg+xml" },
+    { "src": "images/logo.svg", "sizes": "512x512", "type": "image/svg+xml" }
+  ]
+}
