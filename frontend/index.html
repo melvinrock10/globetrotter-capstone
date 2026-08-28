@@ -113,7 +113,7 @@
 
   async function loadPlaces(filters = {}) {
     const grid = document.getElementById("place-grid");
-    grid.innerHTML = `<p style="font-family: var(--font-mono); color:#6B756E;">Loading places…</p>`;
+    grid.innerHTML = `<div class="loading-row"><span class="spinner"></span> Loading places…</div>`;
     try {
       const places = await apiGetPlaces(filters);
       renderPlaces(places);

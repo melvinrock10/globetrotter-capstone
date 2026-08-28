@@ -183,6 +183,7 @@
   }
 
   async function applyFilters() {
+    document.getElementById("browse-list").innerHTML = `<div class="loading-row"><span class="spinner"></span> Searching…</div>`;
     const filters = {
       q: document.getElementById("f-q").value,
       town: document.getElementById("f-town").value,
