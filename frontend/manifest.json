@@ -3,6 +3,7 @@
   "short_name": "ExploreFako",
   "description": "Your local guide to Buea and Limbe — hospitals, hotels, restaurants and more.",
   "start_url": "index.html",
+  "scope": ".",
   "display": "standalone",
   "background_color": "#EDEFEA",
   "theme_color": "#1F4D3E",
