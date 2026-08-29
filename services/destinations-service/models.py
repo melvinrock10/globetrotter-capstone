@@ -10,7 +10,16 @@ _BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 load_dotenv(os.path.join(_BASE_DIR, ".env"))
 
 MONGO_URI = os.environ.get("MONGO_URI")
-_client = MongoClient(MONGO_URI)
+_client = MongoClient(
+    MONGO_URI,
+    maxPoolSize=20,
+    minPoolSize=5,
+    connectTimeoutMS=10000,
+    serverSelectionTimeoutMS=10000,
+    socketTimeoutMS=20000,
+    retryWrites=True,
+    retryReads=True,
+)
 _db = _client["globetrotter"]
 _places = _db["places"]
 _reviews = _db["reviews"]

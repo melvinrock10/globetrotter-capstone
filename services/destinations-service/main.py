@@ -15,6 +15,7 @@ POST   /destinations/<id>/reviews     - submit a review (any logged-in user)
 GET    /destinations/<id>/reviews     - list reviews for a place
 """
 import os
+import time
 import uuid
 import datetime
 import requests
@@ -27,6 +28,18 @@ from models import (
 )
 
 app = Flask(__name__)
+
+
+_places_cache = {"data": None, "timestamp": 0}
+CACHE_TTL_SECONDS = 30
+
+
+def get_cached_places():
+    now = time.time()
+    if _places_cache["data"] is None or (now - _places_cache["timestamp"]) > CACHE_TTL_SECONDS:
+        _places_cache["data"] = get_all_places()
+        _places_cache["timestamp"] = now
+    return _places_cache["data"]
 
 AUTH_SERVICE_URL = os.environ.get("AUTH_SERVICE_URL", "http://localhost:5001")
 
@@ -94,7 +107,7 @@ def search_places():
         except ValueError:
             return jsonify({"error": "min_rating must be a number"}), 400
 
-    places = get_all_places()
+    places = get_cached_places()
     reviews_by_place = _group_reviews_by_place()
     results = []
     for place in places:
@@ -160,6 +173,7 @@ def create_place():
         "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     }
     add_place(place)
+    _places_cache["data"] = None
     return jsonify(place), 201
 
 
@@ -176,6 +190,7 @@ def edit_place(place_id):
     updates = {k: v for k, v in data.items() if k in allowed_fields}
 
     updated = update_place(place_id, updates)
+    _places_cache["data"] = None
     if not updated:
         return jsonify({"error": "place not found"}), 404
     return jsonify(updated), 200
@@ -190,6 +205,7 @@ def remove_place(place_id):
         return jsonify({"error": "admin access required"}), 403
 
     deleted = delete_place(place_id)
+    _places_cache["data"] = None
     if not deleted:
         return jsonify({"error": "place not found"}), 404
     return jsonify({"message": "place deleted"}), 200
