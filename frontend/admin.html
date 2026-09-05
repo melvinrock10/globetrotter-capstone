@@ -316,7 +316,12 @@
         </tr>
       `).join("");
       window._placesCache = places;
-    } catch (err) {
+      } catch (err) {
+      if (err.message && err.message.includes("authentication")) {
+        apiLogout();
+        window.location.href = "login.html";
+        return;
+      }
       showMsg("Could not load places: " + err.message, "error");
     }
   }

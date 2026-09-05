@@ -92,8 +92,13 @@
           </div>
         </div>
       `).join("");
-    } catch (err) {
-      listEl.innerHTML = `<p style="color:#B3261E;">Could not load itineraries.</p>`;
+      } catch (err) {
+      if (err.message && err.message.includes("authentication")) {
+        apiLogout();
+        window.location.href = "login.html";
+        return;
+      }
+      listEl.innerHTML = `<p style="color:#B3261E;">Could not load itineraries. Please try again in a moment.</p>`;
     }
   }
 

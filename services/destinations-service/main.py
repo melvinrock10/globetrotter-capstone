@@ -37,8 +37,16 @@ CACHE_TTL_SECONDS = 30
 def get_cached_places():
     now = time.time()
     if _places_cache["data"] is None or (now - _places_cache["timestamp"]) > CACHE_TTL_SECONDS:
-        _places_cache["data"] = get_all_places()
-        _places_cache["timestamp"] = now
+        try:
+            fresh = get_all_places()
+            _places_cache["data"] = fresh
+            _places_cache["timestamp"] = now
+        except Exception:
+            # Atlas is unreachable right now — if we have ANY previous data,
+            # serve that instead of a hard error. Only fail if we've never
+            # successfully loaded anything yet.
+            if _places_cache["data"] is None:
+                raise
     return _places_cache["data"]
 
 AUTH_SERVICE_URL = os.environ.get("AUTH_SERVICE_URL", "http://localhost:5001")
