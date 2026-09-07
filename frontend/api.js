@@ -3,7 +3,8 @@
  * Shared helper for talking to the GlobeTrotter API Gateway.
  * Every page includes this file before its own script.
  */
-   const API_BASE = "http://localhost:5000";
+const API_BASE = "https://globetrotter-gateway.onrender.com";
+const INACTIVITY_LIMIT_MS = 20 * 60 * 1000; // 20 minutes
 
 function saveSession(token, username, isAdmin) {
   localStorage.setItem("gt_token", token);
@@ -31,286 +32,6 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * Safely parse a fetch Response as JSON.
- * If the server returns something that ISN'T JSON (e.g. an HTML error
- * page during a cold start), this throws a clean, friendly error instead
- * of letting the raw "Unexpected token '<'" crash bubble up to the user.
- */
-async function parseJsonSafe(resp) {
-  const text = await resp.text();
-  try {
-    return JSON.parse(text);
-  } catch (err) {
-    throw new Error("SERVER_WAKING_UP");
-  }
-}
-
-/**
- * Wraps a fetch call with one automatic retry if the server was still
- * waking up from sleep (free hosting tier). Waits 4 seconds, then tries
- * once more before giving up with a friendly message.
- */
-async function fetchWithWakeupRetry(fetchFn) {
-  const delays = [5000, 10000, 15000, 20000]; // up to ~50s total, matching real Render wake times
-  try {
-    return await fetchFn();
-  } catch (err) {
-    if (err.message !== "SERVER_WAKING_UP") throw err;
-    for (const delay of delays) {
-      await sleep(delay);
-      try {
-        return await fetchFn();
-      } catch (err2) {
-        if (err2.message !== "SERVER_WAKING_UP") throw err2;
-        // otherwise keep retrying with the next delay
-      }
-    }
-    throw new Error("The server is taking longer than usual to start. Please try again in a moment.");
-  }
-  
-}
-async function apiRegister(username, password, preferences = [], adminCode = "") {
-  return fetchWithWakeupRetry(async () => {
-    const resp = await fetch(`${API_BASE}/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password, preferences, admin_code: adminCode }),
-    });
-    const data = await parseJsonSafe(resp);
-    if (!resp.ok) throw new Error(data.error || "Registration failed");
-    return data;
-  });
-}
-
-async function apiLogin(username, password) {
-  return fetchWithWakeupRetry(async () => {
-    const resp = await fetch(`${API_BASE}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-    const data = await parseJsonSafe(resp);
-    if (!resp.ok) throw new Error(data.error || "Login failed");
-
-    let isAdminUser = false;
-    try {
-      const verifyResp = await fetch(`${API_BASE}/verify`, {
-        headers: { "Authorization": `Bearer ${data.token}` },
-      });
-      const verifyData = await parseJsonSafe(verifyResp);
-      isAdminUser = !!verifyData.is_admin;
-    } catch (err) {
-      isAdminUser = false;
-    }
-
-    saveSession(data.token, username, isAdminUser);
-    return data;
-  });
-}
-
-function apiLogout() {
-  clearSession();
-}
-
-async function apiGetPlaces(filters = {}) {
-  return fetchWithWakeupRetry(async () => {
-    const params = new URLSearchParams(filters);
-    const resp = await fetch(`${API_BASE}/destinations?${params.toString()}`);
-    const data = await parseJsonSafe(resp);
-    if (!resp.ok) throw new Error(data.error || "Failed to load places");
-    return data;
-  });
-}
-
-async function apiGetPlace(id) {
-  return fetchWithWakeupRetry(async () => {
-    const resp = await fetch(`${API_BASE}/destinations/${id}`);
-    const data = await parseJsonSafe(resp);
-    if (!resp.ok) throw new Error(data.error || "Place not found");
-    return data;
-  });
-}
-
-async function apiCreatePlace(place) {
-  return fetchWithWakeupRetry(async () => {
-    const resp = await fetch(`${API_BASE}/destinations`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify(place),
-    });
-    const data = await parseJsonSafe(resp);
-    if (!resp.ok) throw new Error(data.error || "Failed to add place");
-    return data;
-  });
-}
-
-async function apiUpdatePlace(id, updates) {
-  return fetchWithWakeupRetry(async () => {
-    const resp = await fetch(`${API_BASE}/destinations/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify(updates),
-    });
-    const data = await parseJsonSafe(resp);
-    if (!resp.ok) throw new Error(data.error || "Failed to update place");
-    return data;
-  });
-}
-
-async function apiDeletePlace(id) {
-  return fetchWithWakeupRetry(async () => {
-    const resp = await fetch(`${API_BASE}/destinations/${id}`, {
-      method: "DELETE",
-      headers: authHeaders(),
-    });
-    const data = await parseJsonSafe(resp);
-    if (!resp.ok) throw new Error(data.error || "Failed to delete place");
-    return data;
-  });
-}
-
-async function apiGetReviews(placeId) {
-  return fetchWithWakeupRetry(async () => {
-    const resp = await fetch(`${API_BASE}/destinations/${placeId}/reviews`);
-    const data = await parseJsonSafe(resp);
-    if (!resp.ok) throw new Error(data.error || "Failed to load reviews");
-    return data;
-  });
-}
-
-async function apiSubmitReview(placeId, rating, comment) {
-  return fetchWithWakeupRetry(async () => {
-    const resp = await fetch(`${API_BASE}/destinations/${placeId}/reviews`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify({ rating, comment }),
-    });
-    const data = await parseJsonSafe(resp);
-    if (!resp.ok) throw new Error(data.error || "Failed to submit review");
-    return data;
-  });
-}
-
-async function apiGetRecommendations() {
-  return fetchWithWakeupRetry(async () => {
-    const resp = await fetch(`${API_BASE}/recommendations`, { headers: authHeaders() });
-    const data = await parseJsonSafe(resp);
-    if (!resp.ok) throw new Error(data.error || "Failed to load recommendations");
-    return data;
-  });
-}
-
-async function apiGetItineraries() {
-  return fetchWithWakeupRetry(async () => {
-    const resp = await fetch(`${API_BASE}/itineraries`, { headers: authHeaders() });
-    const data = await parseJsonSafe(resp);
-    if (!resp.ok) throw new Error(data.error || "Failed to load itineraries");
-    return data;
-  });
-}
-
-async function apiCreateItinerary(itinerary) {
-  return fetchWithWakeupRetry(async () => {
-    const resp = await fetch(`${API_BASE}/itineraries`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify(itinerary),
-    });
-    const data = await parseJsonSafe(resp);
-    if (!resp.ok) throw new Error(data.error || "Failed to create itinerary");
-    return data;
-  });
-}
-
-async function apiGetAllUsers() {
-  return fetchWithWakeupRetry(async () => {
-    const resp = await fetch(`${API_BASE}/users`, { headers: authHeaders() });
-    const data = await parseJsonSafe(resp);
-    if (!resp.ok) throw new Error(data.error || "Failed to load users");
-    return data;
-  });
-}
-
-async function apiDeleteUser(username) {
-  return fetchWithWakeupRetry(async () => {
-    const resp = await fetch(`${API_BASE}/users/${username}`, {
-      method: "DELETE",
-      headers: authHeaders(),
-    });
-    const data = await parseJsonSafe(resp);
-    if (!resp.ok) throw new Error(data.error || "Failed to delete user");
-    return data;
-  });
-}
-
-async function apiGetAllItineraries() {
-  return fetchWithWakeupRetry(async () => {
-    const resp = await fetch(`${API_BASE}/itineraries/all`, { headers: authHeaders() });
-    const data = await parseJsonSafe(resp);
-    if (!resp.ok) throw new Error(data.error || "Failed to load itineraries");
-    return data;
-  });
-}
-
-async function apiGetSettings() {
-  return fetchWithWakeupRetry(async () => {
-    const resp = await fetch(`${API_BASE}/settings`);
-    const data = await parseJsonSafe(resp);
-    if (!resp.ok) throw new Error(data.error || "Failed to load settings");
-    return data;
-  });
-}
-
-async function apiUpdateSettings(updates) {
-  return fetchWithWakeupRetry(async () => {
-    const resp = await fetch(`${API_BASE}/settings`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify(updates),
-    });
-    const data = await parseJsonSafe(resp);
-    if (!resp.ok) throw new Error(data.error || "Failed to update settings");
-    return data;
-  });
-}
-
-function toRadShared(deg) { return deg * (Math.PI / 180); }
-
-function haversineDistanceKmShared(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = toRadShared(lat2 - lat1);
-  const dLon = toRadShared(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRadShared(lat1)) * Math.cos(toRadShared(lat2)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-
-async function apiUpdateItinerary(id, updates) {
-  return fetchWithWakeupRetry(async () => {
-    const resp = await fetch(`${API_BASE}/itineraries/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify(updates),
-    });
-    const data = await parseJsonSafe(resp);
-    if (!resp.ok) throw new Error(data.error || "Failed to update itinerary");
-    return data;
-  });
-}
-
-
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch((err) => console.log("SW registration failed:", err));
-  });
-}
-
-
 function showToast(message, isError = false) {
   let container = document.getElementById("toast-container");
   if (!container) {
@@ -327,4 +48,316 @@ function showToast(message, isError = false) {
     toast.classList.remove("show");
     setTimeout(() => toast.remove(), 300);
   }, 3000);
+}
+
+/**
+ * If the session has expired or become invalid, clear it and send the
+ * user to the login page automatically, instead of showing a confusing
+ * "authentication required" error on screen.
+ */
+function forceReauth() {
+  const wasLoggedIn = isLoggedIn();
+  clearSession();
+  if (wasLoggedIn && !window.location.pathname.endsWith("login.html")) {
+    showToast("Your session expired — please log in again.", true);
+    setTimeout(() => { window.location.href = "login.html"; }, 1200);
+  }
+}
+
+async function parseJsonSafe(resp) {
+  const text = await resp.text();
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    throw new Error("SERVER_WAKING_UP");
+  }
+}
+
+async function fetchWithWakeupRetry(fetchFn, requiresAuth = false) {
+  const delays = [5000, 10000, 15000, 20000];
+
+  const attempt = async () => {
+    try {
+      return await fetchFn();
+    } catch (err) {
+      if (requiresAuth && err.status === 401) {
+        forceReauth();
+      }
+      throw err;
+    }
+  };
+
+  try {
+    return await attempt();
+  } catch (err) {
+    if (err.message !== "SERVER_WAKING_UP") throw err;
+    for (const delay of delays) {
+      await sleep(delay);
+      try {
+        return await attempt();
+      } catch (err2) {
+        if (err2.message !== "SERVER_WAKING_UP") throw err2;
+      }
+    }
+    throw new Error("The server is taking longer than usual to start. Please try again in a moment.");
+  }
+}
+
+async function apiRegister(username, password, preferences = [], adminCode = "") {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password, preferences, admin_code: adminCode }),
+    });
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) { const e = new Error(data.error || "Registration failed"); e.status = resp.status; throw e; }
+    return data;
+  });
+}
+
+async function apiLogin(username, password) {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) { const e = new Error(data.error || "Login failed"); e.status = resp.status; throw e; }
+
+    let isAdminUser = false;
+    try {
+      const verifyResp = await fetch(`${API_BASE}/verify`, {
+        headers: { "Authorization": `Bearer ${data.token}` },
+      });
+      const verifyData = await parseJsonSafe(verifyResp);
+      isAdminUser = !!verifyData.is_admin;
+    } catch (err) {
+      isAdminUser = false;
+    }
+
+    saveSession(data.token, username, isAdminUser);
+    resetInactivityTimer();
+    return data;
+  });
+}
+
+function apiLogout() {
+  clearSession();
+}
+
+async function apiGetPlaces(filters = {}) {
+  return fetchWithWakeupRetry(async () => {
+    const params = new URLSearchParams(filters);
+    const resp = await fetch(`${API_BASE}/destinations?${params.toString()}`);
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) { const e = new Error(data.error || "Failed to load places"); e.status = resp.status; throw e; }
+    return data;
+  });
+}
+
+async function apiGetPlace(id) {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/destinations/${id}`);
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) { const e = new Error(data.error || "Place not found"); e.status = resp.status; throw e; }
+    return data;
+  });
+}
+
+async function apiCreatePlace(place) {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/destinations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(place),
+    });
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) { const e = new Error(data.error || "Failed to add place"); e.status = resp.status; throw e; }
+    return data;
+  }, true);
+}
+
+async function apiUpdatePlace(id, updates) {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/destinations/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(updates),
+    });
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) { const e = new Error(data.error || "Failed to update place"); e.status = resp.status; throw e; }
+    return data;
+  }, true);
+}
+
+async function apiDeletePlace(id) {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/destinations/${id}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) { const e = new Error(data.error || "Failed to delete place"); e.status = resp.status; throw e; }
+    return data;
+  }, true);
+}
+
+async function apiGetReviews(placeId) {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/destinations/${placeId}/reviews`);
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) { const e = new Error(data.error || "Failed to load reviews"); e.status = resp.status; throw e; }
+    return data;
+  });
+}
+
+async function apiSubmitReview(placeId, rating, comment) {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/destinations/${placeId}/reviews`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ rating, comment }),
+    });
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) { const e = new Error(data.error || "Failed to submit review"); e.status = resp.status; throw e; }
+    return data;
+  }, true);
+}
+
+async function apiGetRecommendations() {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/recommendations`, { headers: authHeaders() });
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) { const e = new Error(data.error || "Failed to load recommendations"); e.status = resp.status; throw e; }
+    return data;
+  }, true);
+}
+
+async function apiGetItineraries() {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/itineraries`, { headers: authHeaders() });
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) { const e = new Error(data.error || "Failed to load itineraries"); e.status = resp.status; throw e; }
+    return data;
+  }, true);
+}
+
+async function apiCreateItinerary(itinerary) {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/itineraries`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(itinerary),
+    });
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) { const e = new Error(data.error || "Failed to create itinerary"); e.status = resp.status; throw e; }
+    return data;
+  }, true);
+}
+
+async function apiUpdateItinerary(id, updates) {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/itineraries/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(updates),
+    });
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) { const e = new Error(data.error || "Failed to update itinerary"); e.status = resp.status; throw e; }
+    return data;
+  }, true);
+}
+
+async function apiGetAllUsers() {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/users`, { headers: authHeaders() });
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) { const e = new Error(data.error || "Failed to load users"); e.status = resp.status; throw e; }
+    return data;
+  }, true);
+}
+
+async function apiDeleteUser(username) {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/users/${username}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) { const e = new Error(data.error || "Failed to delete user"); e.status = resp.status; throw e; }
+    return data;
+  }, true);
+}
+
+async function apiGetAllItineraries() {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/itineraries/all`, { headers: authHeaders() });
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) { const e = new Error(data.error || "Failed to load itineraries"); e.status = resp.status; throw e; }
+    return data;
+  }, true);
+}
+
+async function apiGetSettings() {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/settings`);
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) { const e = new Error(data.error || "Failed to load settings"); e.status = resp.status; throw e; }
+    return data;
+  });
+}
+
+async function apiUpdateSettings(updates) {
+  return fetchWithWakeupRetry(async () => {
+    const resp = await fetch(`${API_BASE}/settings`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(updates),
+    });
+    const data = await parseJsonSafe(resp);
+    if (!resp.ok) { const e = new Error(data.error || "Failed to update settings"); e.status = resp.status; throw e; }
+    return data;
+  }, true);
+}
+
+function toRadShared(deg) { return deg * (Math.PI / 180); }
+
+function haversineDistanceKmShared(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = toRadShared(lat2 - lat1);
+  const dLon = toRadShared(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadShared(lat1)) * Math.cos(toRadShared(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// ---------------------------------------------------------------------------
+// Auto-logout after inactivity
+// ---------------------------------------------------------------------------
+let inactivityTimer;
+function resetInactivityTimer() {
+  clearTimeout(inactivityTimer);
+  if (!isLoggedIn()) return;
+  inactivityTimer = setTimeout(() => {
+    clearSession();
+    showToast("Logged out due to inactivity.", true);
+    if (!window.location.pathname.endsWith("login.html")) {
+      setTimeout(() => { window.location.href = "login.html"; }, 1200);
+    }
+  }, INACTIVITY_LIMIT_MS);
+}
+["click", "keydown", "mousemove", "scroll", "touchstart"].forEach((evt) =>
+  document.addEventListener(evt, resetInactivityTimer)
+);
+resetInactivityTimer();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch((err) => console.log("SW registration failed:", err));
+  });
 }
