@@ -295,3 +295,22 @@ a { color: inherit; text-decoration: none; }
 .spinner { display: inline-block; width: 22px; height: 22px; border: 3px solid #DDE0D8; border-top-color: var(--green-deep); border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading-row { display: flex; align-items: center; gap: 0.6rem; color: #6B756E; font-family: var(--font-mono); font-size: 0.85rem; padding: 1rem 0; }
+
+
+#chatbot-bubble { position: fixed; bottom: 24px; left: 24px; width: 58px; height: 58px; border-radius: 50%; background: var(--green-deep); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,0.25); z-index: 9998; border: none; }
+#chatbot-bubble:hover { background: var(--green-dark); }
+#chatbot-panel { position: fixed; bottom: 94px; left: 24px; width: 320px; max-height: 440px; background: var(--white); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); display: none; flex-direction: column; z-index: 9998; overflow: hidden; }
+#chatbot-panel.open { display: flex; }
+.cb-header { background: var(--green-deep); color: white; padding: 0.8rem 1rem; font-family: var(--font-display); font-size: 1rem; display: flex; justify-content: space-between; align-items: center; }
+.cb-header button { background: none; border: none; color: white; font-size: 1.1rem; cursor: pointer; }
+.cb-messages { flex: 1; overflow-y: auto; padding: 0.8rem; display: flex; flex-direction: column; gap: 0.6rem; background: var(--mist); }
+.cb-msg { max-width: 85%; padding: 0.55rem 0.8rem; border-radius: 10px; font-size: 0.85rem; line-height: 1.4; }
+.cb-msg.bot { background: var(--white); align-self: flex-start; }
+.cb-msg.user { background: var(--green-deep); color: white; align-self: flex-end; }
+.cb-msg a { color: var(--green-deep); font-weight: 600; }
+.cb-msg.user a { color: var(--gold); }
+.cb-place-link { display: block; margin-top: 0.3rem; }
+.cb-input-row { display: flex; border-top: 1px solid #DDE0D8; }
+.cb-input-row input { flex: 1; border: none; padding: 0.7rem 0.9rem; font-family: var(--font-body); font-size: 0.85rem; }
+.cb-input-row input:focus { outline: none; }
+.cb-input-row button { background: var(--gold); border: none; color: var(--green-dark); font-weight: 700; padding: 0 1rem; cursor: pointer; }

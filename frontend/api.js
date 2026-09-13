@@ -361,3 +361,129 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").catch((err) => console.log("SW registration failed:", err));
   });
 }
+
+
+// ---------------------------------------------------------------------------
+// Chatbot — simple rule-based assistant over the existing places API
+// ---------------------------------------------------------------------------
+function injectChatbot() {
+  const bubble = document.createElement("button");
+  bubble.id = "chatbot-bubble";
+  bubble.innerHTML = "💬";
+  bubble.title = "Chat with Explore Fako";
+
+  const panel = document.createElement("div");
+  panel.id = "chatbot-panel";
+  panel.innerHTML = `
+    <div class="cb-header">
+      <span>Explore Fako Assistant</span>
+      <button id="cb-close">✕</button>
+    </div>
+    <div class="cb-messages" id="cb-messages"></div>
+    <div class="cb-input-row">
+      <input type="text" id="cb-input" placeholder="Ask me e.g. 'best hotels in Buea'">
+      <button id="cb-send">Send</button>
+    </div>
+  `;
+
+  document.body.appendChild(bubble);
+  document.body.appendChild(panel);
+
+  bubble.addEventListener("click", () => {
+    panel.classList.toggle("open");
+    if (panel.classList.contains("open") && document.getElementById("cb-messages").children.length === 0) {
+      addBotMessage("Hi! I'm the Explore Fako assistant. Ask me things like <em>\"restaurants in Limbe\"</em>, <em>\"5 star hotels\"</em>, or <em>\"how do I plan a trip?\"</em>");
+    }
+  });
+  document.getElementById("cb-close").addEventListener("click", () => panel.classList.remove("open"));
+
+  const input = document.getElementById("cb-input");
+  const sendBtn = document.getElementById("cb-send");
+  const send = () => {
+    const text = input.value.trim();
+    if (!text) return;
+    addUserMessage(text);
+    input.value = "";
+    handleChatQuery(text);
+  };
+  sendBtn.addEventListener("click", send);
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
+}
+
+function addUserMessage(text) {
+  const msgs = document.getElementById("cb-messages");
+  const div = document.createElement("div");
+  div.className = "cb-msg user";
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addBotMessage(html) {
+  const msgs = document.getElementById("cb-messages");
+  const div = document.createElement("div");
+  div.className = "cb-msg bot";
+  div.innerHTML = html;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function handleChatQuery(rawText) {
+  const text = rawText.toLowerCase();
+
+  if (/\b(hi|hello|hey|good (morning|afternoon|evening))\b/.test(text)) {
+    addBotMessage("Hello! Try asking about a category (hospital, hotel, restaurant, pharmacy, school), a town (Buea or Limbe), or say \"help\".");
+    return;
+  }
+  if (/\bhelp\b/.test(text)) {
+    addBotMessage(`I can help you:<br>• Find places — "hotels in Buea"<br>• Find top-rated places — "5 star restaurants"<br>• Plan a trip — say "itinerary"<br>• Get fares — open any place page and tap "Find distance & fare"`);
+    return;
+  }
+  if (/itinerar/.test(text)) {
+    addBotMessage(`You can plan and save trips on the <a href="itinerary.html">My Itineraries</a> page — it keeps your history so you can revisit places anytime.`);
+    return;
+  }
+  if (/(fare|taxi|bike|moto|price to get|transport)/.test(text)) {
+    addBotMessage(`Open any place's page and tap <strong>"Find distance & fare"</strong> — I'll estimate the taxi/bike cost from your current location.`);
+    return;
+  }
+
+  const categories = ["hospital", "hotel", "restaurant", "pharmacy", "school"];
+  const foundCategory = categories.find((c) => text.includes(c) || text.includes(c + "s"));
+  const foundTown = ["buea", "limbe"].find((t) => text.includes(t));
+
+  let minRating = null;
+  const starMatch = text.match(/(\d)(?:\s*-?\s*star|\s*star)/);
+  if (starMatch) minRating = parseFloat(starMatch[1]);
+  else if (/\b(best|top rated|top-rated)\b/.test(text)) minRating = 4;
+
+  const filters = {};
+  if (foundCategory) filters.category = foundCategory;
+  if (foundTown) filters.town = foundTown;
+  if (minRating) filters.min_rating = minRating;
+
+  if (Object.keys(filters).length === 0) {
+    filters.q = rawText;
+  }
+
+  try {
+    addBotMessage("Searching…");
+    const places = await apiGetPlaces(filters);
+    const messagesEl = document.getElementById("cb-messages");
+    messagesEl.lastChild.remove();
+
+    if (!places || places.length === 0) {
+      addBotMessage("I couldn't find a match. Try a different category, town, or check the <a href=\"browse.html\">Browse page</a>.");
+      return;
+    }
+    const top = places.sort((a, b) => (b.average_rating || 0) - (a.average_rating || 0)).slice(0, 5);
+    const listHtml = top.map((p) =>
+      `<a class="cb-place-link" href="place.html?id=${p.id}">★ ${p.average_rating ?? "—"} — ${p.name} (${p.town || ""})</a>`
+    ).join("");
+    addBotMessage(`Here's what I found:${listHtml}`);
+  } catch (err) {
+    addBotMessage("Sorry, I couldn't search right now — please try again in a moment.");
+  }
+}
+
+document.addEventListener("DOMContentLoaded", injectChatbot);
