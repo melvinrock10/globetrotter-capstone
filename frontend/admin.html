@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <style>
-  .admin-wrap { max-width: 1000px; margin: 2rem auto; padding: 0 2rem; }
+  .admin-wrap { max-width: 1000px; }
   .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
   .admin-header h1 { font-family: var(--font-display); font-size: 1.8rem; margin: 0; }
   .add-form { background: var(--white); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 4px 14px rgba(20,35,28,0.08); }
@@ -38,7 +38,10 @@
 <body>
 
 <div class="navbar">
-  <div class="logo">Globe<span>Trotter</span></div>
+  <div class="logo" style="display:flex; align-items:center; gap:0.5rem;">
+  <img src="images/logo.svg" alt="" style="width:32px; height:32px;">
+  Explore<span>Fako</span>
+</div>
   <nav>
     <a href="index.html">Home</a>
     <a href="browse.html">Browse</a>
@@ -48,7 +51,7 @@
 
 <div id="admin-content" style="display:none;">
   <div class="breadcrumb"><a href="index.html">Home</a> <span class="sep">/</span> <span>Admin dashboard</span></div>
-  <div class="admin-wrap">
+  <div class="admin-wrap content-panel">
     <button class="back-btn" onclick="history.back()">← Back</button>
     <div class="admin-header">
       <h1>Admin dashboard</h1>
@@ -142,8 +145,6 @@
       <button type="button" class="btn" style="margin-top:1rem;" id="save-settings-btn">Save rates</button>
       <span id="settings-msg" style="margin-left:1rem; font-size:0.85rem;"></span>
     </div>
-
-    
 
     <div class="section-heading" style="margin-top:3rem;">Analytics</div>
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap:1rem; margin-bottom:1.5rem;">
@@ -316,7 +317,7 @@
         </tr>
       `).join("");
       window._placesCache = places;
-      } catch (err) {
+    } catch (err) {
       if (err.message && err.message.includes("authentication")) {
         apiLogout();
         window.location.href = "login.html";
